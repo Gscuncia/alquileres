@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #ff385c;
+  --color-primary-active: #e00b41;
+  --color-ink: #222222;
+  --color-body: #3f3f3f;
+  --color-muted: #6a6a6a;
+  --color-canvas: #ffffff;
+  --color-surface-soft: #f7f7f7;
+  --color-hairline: #dddddd;
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-canvas);
+}

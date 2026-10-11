@@ -1,12 +1,12 @@
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import path from "path";
+import { fileURLToPath } from "url";
 
 const ADMIN_EMAIL = "admin@alquileresanita.com.ar";
 const ADMIN_PASSWORD = "admin123"; // Change after first login.
 
-async function main() {
+export async function seed(prisma: PrismaClient) {
   const existing = await prisma.user.findUnique({
     where: { email: ADMIN_EMAIL },
   });
@@ -30,12 +30,23 @@ async function main() {
   console.log(`Created admin user: ${admin.email} (${admin.role})`);
 }
 
-main()
-  .then(async () => {
+async function main() {
+  const prisma = new PrismaClient();
+  try {
+    await seed(prisma);
+  } finally {
     await prisma.$disconnect();
-  })
-  .catch(async (error) => {
+  }
+}
+
+const isMainModule =
+  process.argv.length > 1 &&
+  path.resolve(fileURLToPath(import.meta.url)) ===
+    path.resolve(process.argv[1]);
+
+if (isMainModule) {
+  main().catch(async (error) => {
     console.error(error);
-    await prisma.$disconnect();
     process.exit(1);
   });
+}

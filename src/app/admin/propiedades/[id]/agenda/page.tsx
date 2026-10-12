@@ -9,10 +9,11 @@ import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { createBooking, deleteBooking, updateBooking } from "@/app/admin/bookings/actions";
 
 const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 interface AgendaPageProps {
   params: { id: string };
-  searchParams?: { mes?: string; reserva?: string };
+  searchParams?: { mes?: string; reserva?: string; fecha?: string };
 }
 
 function monthBounds(month: string): { start: Date; end: Date } {
@@ -33,11 +34,7 @@ function monthBounds(month: string): { start: Date; end: Date } {
 function toFormValues(
   booking: {
     id: string;
-    firstName: string;
-    lastName: string;
-    dni: string;
-    phone: string;
-    email: string | null;
+    guest: { id: string };
     checkIn: Date;
     checkOut: Date;
     /** Prisma Decimal arrives here; converted once at the boundary. */
@@ -53,11 +50,7 @@ function toFormValues(
   return {
     id: booking.id,
     propertyId,
-    firstName: booking.firstName,
-    lastName: booking.lastName,
-    dni: booking.dni,
-    phone: booking.phone,
-    email: booking.email ?? "",
+    guestId: booking.guest.id,
     checkInDate: toDateStr(booking.checkIn),
     checkInTime: toTimeStr(booking.checkIn),
     checkOutDate: toDateStr(booking.checkOut),
@@ -90,7 +83,7 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
   const { start, end } = monthBounds(month);
   const monthParam = `?mes=${month}`;
 
-  const [bookings, editingBooking, recipients] = await Promise.all([
+  const [bookings, editingBooking, recipients, guests] = await Promise.all([
     prisma.booking.findMany({
       where: {
         propertyId: property.id,
@@ -98,20 +91,40 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
         checkOut: { gt: start },
       },
       orderBy: { checkIn: "asc" },
+      include: { guest: true },
     }),
     searchParams?.reserva
       ? prisma.booking.findUnique({
           where: { id: searchParams.reserva },
+          include: { guest: true },
         })
       : Promise.resolve(null),
     prisma.transferRecipient.findMany({ orderBy: { name: "asc" } }),
+    prisma.guest.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    }),
   ]);
 
   // Only a booking of this property may be edited here.
   const editing = editingBooking?.propertyId === property.id ? editingBooking : null;
 
-  const calendarBookings: CalendarBooking[] = bookings;
+  const calendarBookings: CalendarBooking[] = bookings.map((booking) => ({
+    id: booking.id,
+    firstName: booking.guest.firstName,
+    lastName: booking.guest.lastName,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+  }));
   const currentPath = `${basePath}${monthParam}`;
+
+  // Day-click prefill: `?fecha=YYYY-MM-DD` starts a create form on that day
+  // with the default times; without it the form defaults to today.
+  const fecha = VALID_DATE.test(searchParams?.fecha ?? "")
+    ? (searchParams?.fecha as string)
+    : "";
+  const initialValues = editing
+    ? toFormValues(editing, property.id)
+    : { checkInDate: fecha || toDateStr(new Date()), checkInTime: "12:00", checkOutTime: "10:00" };
 
   return (
     <div className="space-y-8">
@@ -150,7 +163,14 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
         </div>
         <BookingForm
           action={editing ? updateBooking : createBooking}
-          initialValues={editing ? toFormValues(editing, property.id) : undefined}
+          initialValues={initialValues}
+          guests={guests.map(({ id, firstName, lastName, dni, phone }) => ({
+            id,
+            firstName,
+            lastName,
+            dni,
+            phone,
+          }))}
           recipients={recipients.map(({ id, name }) => ({ id, name }))}
           submitLabel={editing ? "Guardar cambios" : "Crear reserva"}
         />
@@ -168,7 +188,7 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
                 className="flex items-center justify-between gap-4 px-4 py-3"
               >
                 <span className="text-body-sm text-body">
-                  {booking.firstName} {booking.lastName} · ${Number(booking.pricePerNight)}/noche
+                  {booking.guest.firstName} {booking.guest.lastName} · ${Number(booking.pricePerNight)}/noche
                 </span>
                 <form action={deleteBooking}>
                   <input type="hidden" name="id" value={booking.id} />

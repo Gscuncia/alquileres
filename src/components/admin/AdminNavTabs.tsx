@@ -7,14 +7,16 @@ const TABS = [
   { href: "/admin", label: "Panel" },
   { href: "/admin/propiedades", label: "Propiedades" },
   { href: "/admin/reservas", label: "Reservas" },
+  { href: "/admin/huespedes", label: "Huéspedes" },
   { href: "/admin/destinatarios", label: "Destinatarios" },
+  { href: "/admin/gastos", label: "Gastos" },
 ] as const;
 
 /**
  * Admin sub-nav: `usePathname` is client-only state, so the active tab
  * (bold + underline per design tokens) lives in a client component.
- * "Gastos" points to the /admin/gastos placeholder (PR4) as a plain
- * anchor, per the delivery note.
+ * PR1 moves "Gastos" into `TABS` (it points at the working gastos page);
+ * PR2 inserts "Calendario" after "Panel".
  */
 export function AdminNavTabs() {
   const pathname = usePathname();
@@ -41,12 +43,6 @@ export function AdminNavTabs() {
           </Link>
         );
       })}
-      <a
-        href="/admin/gastos"
-        className="text-button-md text-muted hover:underline"
-      >
-        Gastos
-      </a>
     </nav>
   );
 }

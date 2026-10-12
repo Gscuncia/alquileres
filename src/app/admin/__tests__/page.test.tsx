@@ -41,8 +41,7 @@ const periodBookings = [
   {
     id: "b-1",
     propertyId: "p-1",
-    firstName: "Laura",
-    lastName: "Gómez",
+    guest: { firstName: "Laura", lastName: "Gómez" },
     checkIn: toUtc("2026-09-30", "18:00"),
     checkOut: toUtc("2026-10-05", "10:00"),
     pricePerNight: 90,
@@ -52,8 +51,7 @@ const periodBookings = [
   {
     id: "b-2",
     propertyId: "p-2",
-    firstName: "Diego",
-    lastName: "Fernández",
+    guest: { firstName: "Diego", lastName: "Fernández" },
     checkIn: toUtc("2026-10-02", "14:00"),
     checkOut: toUtc("2026-10-08", "10:00"),
     pricePerNight: 100,
@@ -199,8 +197,7 @@ describe("AdminDashboardPage", () => {
         // Check-in in the window, check-out far beyond it → only checkIns.
         id: "b-m1",
         propertyId: "p-1",
-        firstName: "Homero",
-        lastName: "Próximo",
+        guest: { firstName: "Homero", lastName: "Próximo" },
         checkIn: tomorrow,
         checkOut: in20Days,
         pricePerNight: 100,
@@ -211,8 +208,7 @@ describe("AdminDashboardPage", () => {
         // Check-out in the window, check-in already past → only checkOuts.
         id: "b-m2",
         propertyId: "p-2",
-        firstName: "Saliente",
-        lastName: "Visitante",
+        guest: { firstName: "Saliente", lastName: "Visitante" },
         checkIn: fiveDaysAgo,
         checkOut: tomorrow,
         pricePerNight: 100,
@@ -223,8 +219,7 @@ describe("AdminDashboardPage", () => {
         // 20 days out → excluded entirely.
         id: "b-m3",
         propertyId: "p-2",
-        firstName: "Lejana",
-        lastName: "Reserva",
+        guest: { firstName: "Lejana", lastName: "Reserva" },
         checkIn: in20Days,
         checkOut: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
         pricePerNight: 100,

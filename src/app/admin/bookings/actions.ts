@@ -33,11 +33,7 @@ function buildBookingInput(formData: FormData): Record<string, unknown> {
 
   return {
     propertyId: text("propertyId"),
-    firstName: text("firstName"),
-    lastName: text("lastName"),
-    dni: text("dni"),
-    phone: text("phone"),
-    email: text("email"),
+    guestId: text("guestId"),
     checkInDate: text("checkInDate"),
     checkInTime: text("checkInTime"),
     checkOutDate: text("checkOutDate"),
@@ -85,11 +81,7 @@ function revalidateBookingPaths(propertyId: string): void {
 function toPrismaData(data: BookingInput) {
   return {
     propertyId: data.propertyId,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    dni: data.dni,
-    phone: data.phone,
-    email: data.email ?? null,
+    guestId: data.guestId,
     checkIn: toUtc(data.checkInDate, data.checkInTime),
     checkOut: toUtc(data.checkOutDate, data.checkOutTime),
     pricePerNight: data.pricePerNight,
@@ -124,13 +116,17 @@ async function withOverlapCheck(
       checkIn: { lt: checkOut },
       checkOut: { gt: checkIn },
     },
-    select: { firstName: true, lastName: true, checkIn: true, checkOut: true },
+    select: {
+      guest: { select: { firstName: true, lastName: true } },
+      checkIn: true,
+      checkOut: true,
+    },
   });
 
   if (conflict) {
     return {
       ok: false,
-      message: `Conflicto con la reserva de ${conflict.firstName} ${conflict.lastName} (${formatInTz(
+      message: `Conflicto con la reserva de ${conflict.guest.firstName} ${conflict.guest.lastName} (${formatInTz(
         conflict.checkIn,
       )} → ${formatInTz(conflict.checkOut)})`,
     };

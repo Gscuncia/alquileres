@@ -25,8 +25,7 @@ function booking(overrides = {}) {
   return {
     id: "b-1",
     propertyId: "p-1",
-    firstName: "Juan",
-    lastName: "Pérez",
+    guest: { firstName: "Juan", lastName: "Pérez" },
     checkIn: toUtc("2026-10-01", "14:00"),
     checkOut: toUtc("2026-10-03", "10:00"),
     pricePerNight: 100,
@@ -44,8 +43,7 @@ describe("boundary conversion", () => {
     const row = {
       id: "b-1",
       propertyId: "p-1",
-      firstName: "Juan",
-      lastName: "Pérez",
+      guest: { firstName: "Juan", lastName: "Pérez" },
       checkIn: toUtc("2026-10-01", "14:00"),
       checkOut: toUtc("2026-10-03", "10:00"),
       pricePerNight: decimalLike(100),

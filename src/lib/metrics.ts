@@ -31,6 +31,7 @@ function toNumber(value: NumericLike): number {
 export interface BookingSnapshot {
   id: string;
   propertyId: string;
+  /** Denormalized from the related guest for display convenience. */
   firstName: string;
   lastName: string;
   checkIn: Date;
@@ -52,9 +53,10 @@ export interface ExpenseSnapshot {
   date: Date;
 }
 
-type BookingRowLike = Omit<Booking, "pricePerNight" | "depositAmount"> & {
+type BookingRowLike = Omit<Booking, "pricePerNight" | "depositAmount" | "guest"> & {
   pricePerNight: NumericLike;
   depositAmount: NumericLike;
+  guest: { firstName: string; lastName: string };
 };
 
 type ExpenseRowLike = Omit<Expense, "amount"> & { amount: NumericLike };
@@ -64,8 +66,8 @@ export function toBookingSnapshot(booking: BookingRowLike): BookingSnapshot {
   return {
     id: booking.id,
     propertyId: booking.propertyId,
-    firstName: booking.firstName,
-    lastName: booking.lastName,
+    firstName: booking.guest.firstName,
+    lastName: booking.guest.lastName,
     checkIn: booking.checkIn,
     checkOut: booking.checkOut,
     pricePerNight: toNumber(booking.pricePerNight),

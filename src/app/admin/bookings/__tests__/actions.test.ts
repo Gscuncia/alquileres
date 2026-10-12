@@ -59,11 +59,7 @@ function buildBookingFormData(
   const formData = new FormData();
   const base: Record<string, string> = {
     propertyId: "prop-1",
-    firstName: "Juan",
-    lastName: "Pérez",
-    dni: "32456778",
-    phone: "11 5555 5555",
-    email: "",
+    guestId: "guest-1",
     checkInDate: "2026-10-10",
     checkInTime: "12:00",
     checkOutDate: "2026-10-13",
@@ -121,20 +117,28 @@ describe("booking actions", () => {
     expect(mocks.bookingDelete).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid input with Spanish field errors before opening a transaction", async () => {
+  it("rejects booking with empty guestId (El huésped es obligatorio.) without touching the database", async () => {
+    const result = await createBooking(
+      initialState,
+      buildBookingFormData({ guestId: "" }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.fieldErrors?.guestId).toBe("El huésped es obligatorio.");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid stay fields with Spanish field errors before opening a transaction", async () => {
     const result = await createBooking(
       initialState,
       buildBookingFormData({
-        dni: "123456789",
-        email: "no-es-mail",
         pricePerNight: "0",
         checkInTime: "10:15",
       }),
     );
 
     expect(result.ok).toBe(false);
-    expect(result.fieldErrors?.dni).toMatch(/7 y 8 dígitos/);
-    expect(result.fieldErrors?.email).toMatch(/formato válido/);
     expect(result.fieldErrors?.pricePerNight).toMatch(/mayor que 0/);
     expect(result.fieldErrors?.checkInTime).toMatch(/30 minutos/);
     expect(mocks.transaction).not.toHaveBeenCalled();
@@ -151,7 +155,7 @@ describe("booking actions", () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
-  it("creates a booking inside an advisory-locked transaction and revalidates admin views", async () => {
+  it("creates a booking linked to the guest inside an advisory-locked transaction", async () => {
     const result = await createBooking(initialState, buildBookingFormData());
 
     expect(result.ok).toBe(true);
@@ -159,9 +163,7 @@ describe("booking actions", () => {
     expect(mocks.txCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         propertyId: "prop-1",
-        firstName: "Juan",
-        lastName: "Pérez",
-        dni: "32456778",
+        guestId: "guest-1",
         checkIn: new Date("2026-10-10T12:00:00-03:00"),
         checkOut: new Date("2026-10-13T10:00:00-03:00"),
         pricePerNight: 150,
@@ -182,7 +184,7 @@ describe("booking actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/destinatarios");
   });
 
-  it("scopes the conflict query to the property and uses inclusive-exclusive bounds", async () => {
+  it("scopes the conflict query to the property, the guest relation and inclusive-exclusive bounds", async () => {
     await createBooking(initialState, buildBookingFormData());
 
     expect(mocks.txFindFirst).toHaveBeenCalledWith({
@@ -191,14 +193,17 @@ describe("booking actions", () => {
         checkIn: { lt: new Date("2026-10-13T10:00:00-03:00") },
         checkOut: { gt: new Date("2026-10-10T12:00:00-03:00") },
       }),
-      select: { firstName: true, lastName: true, checkIn: true, checkOut: true },
+      select: {
+        guest: { select: { firstName: true, lastName: true } },
+        checkIn: true,
+        checkOut: true,
+      },
     });
   });
 
-  it("rejects an overlapping stay with a Spanish conflict naming client and dates", async () => {
+  it("rejects an overlapping stay with a Spanish conflict naming the guest and dates", async () => {
     mocks.txFindFirst.mockResolvedValue({
-      firstName: "Ana",
-      lastName: "Gómez",
+      guest: { firstName: "Ana", lastName: "Gómez" },
       checkIn: new Date("2026-10-12T12:00:00-03:00"),
       checkOut: new Date("2026-10-14T10:00:00-03:00"),
     });
@@ -254,18 +259,21 @@ describe("booking actions", () => {
       });
       expect(mocks.txFindFirst).toHaveBeenCalledWith({
         where: expect.objectContaining({ id: { not: "b-1" } }),
-        select: { firstName: true, lastName: true, checkIn: true, checkOut: true },
+        select: {
+          guest: { select: { firstName: true, lastName: true } },
+          checkIn: true,
+          checkOut: true,
+        },
       });
       expect(mocks.txUpdate).toHaveBeenCalledWith({
         where: { id: "b-1" },
-        data: expect.objectContaining({ propertyId: "prop-1" }),
+        data: expect.objectContaining({ propertyId: "prop-1", guestId: "guest-1" }),
       });
     });
 
     it("rejects moving onto another existing stay and leaves that booking unchanged", async () => {
       mocks.txFindFirst.mockResolvedValue({
-        firstName: "Ana",
-        lastName: "Gómez",
+        guest: { firstName: "Ana", lastName: "Gómez" },
         checkIn: new Date("2026-10-12T12:00:00-03:00"),
         checkOut: new Date("2026-10-14T10:00:00-03:00"),
       });
@@ -279,7 +287,11 @@ describe("booking actions", () => {
       expect(result.message).toContain("Conflicto con la reserva de Ana Gómez");
       expect(mocks.txFindFirst).toHaveBeenCalledWith({
         where: expect.objectContaining({ id: { not: "b-1" } }),
-        select: { firstName: true, lastName: true, checkIn: true, checkOut: true },
+        select: {
+          guest: { select: { firstName: true, lastName: true } },
+          checkIn: true,
+          checkOut: true,
+        },
       });
       expect(mocks.txUpdate).not.toHaveBeenCalled();
     });
@@ -304,8 +316,7 @@ describe("booking actions", () => {
         propertyId: string;
         checkIn: Date;
         checkOut: Date;
-        firstName: string;
-        lastName: string;
+        guestId: string;
       }> = [];
 
       // Mimics pg_advisory_xact_lock: transactions on the same property run
@@ -325,22 +336,26 @@ describe("booking actions", () => {
               } }) => {
                 const newOut = args.where.checkIn.lt;
                 const newIn = args.where.checkOut.gt;
-                return (
-                  stored.find(
-                    (b) =>
-                      b.propertyId === args.where.propertyId &&
-                      b.checkIn < newOut &&
-                      b.checkOut > newIn,
-                  ) ?? null
+                const winner = stored.find(
+                  (b) =>
+                    b.propertyId === args.where.propertyId &&
+                    b.checkIn < newOut &&
+                    b.checkOut > newIn,
                 );
+                return winner
+                  ? {
+                      guest: { firstName: "Juana", lastName: "Pérez" },
+                      checkIn: winner.checkIn,
+                      checkOut: winner.checkOut,
+                    }
+                  : null;
               }),
               create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
                 stored.push({
                   propertyId: data.propertyId as string,
                   checkIn: data.checkIn as Date,
                   checkOut: data.checkOut as Date,
-                  firstName: data.firstName as string,
-                  lastName: data.lastName as string,
+                  guestId: data.guestId as string,
                 });
                 return { id: "created" };
               }),
@@ -353,10 +368,9 @@ describe("booking actions", () => {
         },
       );
 
-      const formData = buildBookingFormData({ firstName: "Juana" });
       const [first, second] = await Promise.all([
-        createBooking(initialState, formData),
-        createBooking(initialState, formData),
+        createBooking(initialState, buildBookingFormData()),
+        createBooking(initialState, buildBookingFormData()),
       ]);
 
       const successes = [first, second].filter((r) => r.ok);

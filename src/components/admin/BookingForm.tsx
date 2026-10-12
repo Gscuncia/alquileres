@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
 import { Button } from "@/components/design-system";
+import { GuestPicker, type GuestOption } from "@/components/admin/GuestPicker";
 
 export interface RecipientOption {
   id: string;
@@ -13,11 +14,7 @@ export interface RecipientOption {
 export interface BookingFormValues {
   id?: string;
   propertyId: string;
-  firstName: string;
-  lastName: string;
-  dni: string;
-  phone: string;
-  email: string;
+  guestId: string;
   checkInDate: string;
   checkInTime: string;
   checkOutDate: string;
@@ -33,17 +30,16 @@ export interface BookingFormValues {
 interface BookingFormProps {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   initialValues?: Partial<BookingFormValues>;
+  guests: GuestOption[];
   recipients: RecipientOption[];
+  /** Provided only where a property may be chosen in the form (calendar). */
+  properties?: { id: string; title: string }[];
   submitLabel?: string;
 }
 
 export const EMPTY_BOOKING_FORM: BookingFormValues = {
   propertyId: "",
-  firstName: "",
-  lastName: "",
-  dni: "",
-  phone: "",
-  email: "",
+  guestId: "",
   checkInDate: "",
   checkInTime: "12:00",
   checkOutDate: "",
@@ -76,7 +72,9 @@ function FieldError({ message }: { message?: string }) {
 export function BookingForm({
   action,
   initialValues,
+  guests,
   recipients,
+  properties,
   submitLabel = "Guardar",
 }: BookingFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
@@ -105,79 +103,39 @@ export function BookingForm({
           {state.message}
         </div>
       )}
-      {values.propertyId && (
-        <input type="hidden" name="propertyId" value={values.propertyId} />
-      )}
       {values.id && <input type="hidden" name="id" value={values.id} />}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {!properties && values.propertyId && (
+        <input type="hidden" name="propertyId" value={values.propertyId} />
+      )}
+      {properties && (
         <div>
-          <label htmlFor="firstName" className={labelClasses}>
-            Nombre
+          <label htmlFor="propertyId" className={labelClasses}>
+            Propiedad
           </label>
-          <input
-            id="firstName"
-            name="firstName"
-            type="text"
-            defaultValue={values.firstName}
+          <select
+            id="propertyId"
+            name="propertyId"
+            defaultValue={values.propertyId}
             className={inputClasses}
-          />
-          <FieldError message={fieldErrors.firstName} />
+          >
+            <option value="">Seleccionar propiedad…</option>
+            {properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.title}
+              </option>
+            ))}
+          </select>
+          <FieldError message={fieldErrors.propertyId} />
         </div>
-        <div>
-          <label htmlFor="lastName" className={labelClasses}>
-            Apellido
-          </label>
-          <input
-            id="lastName"
-            name="lastName"
-            type="text"
-            defaultValue={values.lastName}
-            className={inputClasses}
-          />
-          <FieldError message={fieldErrors.lastName} />
-        </div>
-        <div>
-          <label htmlFor="dni" className={labelClasses}>
-            DNI
-          </label>
-          <input
-            id="dni"
-            name="dni"
-            type="text"
-            inputMode="numeric"
-            defaultValue={values.dni}
-            className={inputClasses}
-          />
-          <FieldError message={fieldErrors.dni} />
-        </div>
-        <div>
-          <label htmlFor="phone" className={labelClasses}>
-            Teléfono
-          </label>
-          <input
-            id="phone"
-            name="phone"
-            type="text"
-            defaultValue={values.phone}
-            className={inputClasses}
-          />
-          <FieldError message={fieldErrors.phone} />
-        </div>
-        <div>
-          <label htmlFor="email" className={labelClasses}>
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="text"
-            defaultValue={values.email}
-            className={inputClasses}
-          />
-          <p className="mt-1 text-caption-sm text-muted">Opcional.</p>
-          <FieldError message={fieldErrors.email} />
-        </div>
+      )}
+
+      <div>
+        <GuestPicker
+          guests={guests}
+          defaultValue={values.guestId}
+          fieldError={fieldErrors.guestId}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

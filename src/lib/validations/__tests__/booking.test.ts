@@ -3,11 +3,7 @@ import { bookingSchema } from "@/lib/validations/booking";
 
 const validBooking = {
   propertyId: "prop-1",
-  firstName: "Juan",
-  lastName: "Pérez",
-  dni: "32456778",
-  phone: "+54 11 5555-5555",
-  email: "",
+  guestId: "guest-1",
   checkInDate: "2026-10-10",
   checkInTime: "12:00",
   checkOutDate: "2026-10-13",
@@ -25,7 +21,7 @@ function parse(overrides: Record<string, unknown> = {}) {
 }
 
 describe("bookingSchema", () => {
-  it("accepts a valid efectivo booking", () => {
+  it("accepts a valid efectivo booking with a guest", () => {
     const result = parse();
     expect(result.success).toBe(true);
   });
@@ -38,6 +34,35 @@ describe("bookingSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.recipientId).toBe("recipient-sonia");
+    }
+  });
+
+  it("rejects an empty guestId (El huésped es obligatorio.)", () => {
+    const result = parse({ guestId: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (candidate) => String(candidate.path[0]) === "guestId",
+      );
+      expect(issue?.message).toBe("El huésped es obligatorio.");
+    }
+  });
+
+  it("no longer collects guest identity fields inline", () => {
+    // The booking schema derives from the guest agenda; names/DNI/phone live
+    // on the Guest record only. guestSchema owns that validation.
+    const result = bookingSchema.safeParse({
+      ...validBooking,
+      guestId: "guest-1",
+      firstName: "Juan",
+      lastName: "Pérez",
+      dni: "32456778",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("firstName");
+      expect(result.data).not.toHaveProperty("lastName");
+      expect(result.data).not.toHaveProperty("dni");
     }
   });
 
@@ -54,10 +79,7 @@ describe("bookingSchema", () => {
 
   describe("required fields name the field in Spanish", () => {
     const requiredFieldCases = [
-      ["firstName", /nombre/i],
-      ["lastName", /apellido/i],
-      ["dni", /dni/i],
-      ["phone", /tel[eé]fono/i],
+      ["guestId", /hu[eé]sped/i],
       ["propertyId", /propiedad/i],
     ] as const;
 
@@ -69,57 +91,6 @@ describe("bookingSchema", () => {
           (candidate) => String(candidate.path[0]) === field,
         );
         expect(issue?.message).toMatch(pattern);
-      }
-    });
-  });
-
-  describe("dni", () => {
-    it("accepts 7 and 8 digit DNIs", () => {
-      expect(parse({ dni: "1234567" }).success).toBe(true);
-      expect(parse({ dni: "12345678" }).success).toBe(true);
-    });
-
-    it("rejects 'abc' with the 7–8 digit message", () => {
-      const result = parse({ dni: "abc" });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const issue = result.error.issues.find(
-          (candidate) => String(candidate.path[0]) === "dni",
-        );
-        expect(issue?.message).toMatch(/7 y 8 dígitos/);
-      }
-    });
-
-    it("rejects 9 digits", () => {
-      expect(parse({ dni: "123456789" }).success).toBe(false);
-    });
-  });
-
-  describe("email", () => {
-    it("rejects 'no-es-mail' with a format message", () => {
-      const result = parse({ email: "no-es-mail" });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const issue = result.error.issues.find(
-          (candidate) => String(candidate.path[0]) === "email",
-        );
-        expect(issue?.message).toMatch(/formato válido/);
-      }
-    });
-
-    it("accepts a valid email", () => {
-      const result = parse({ email: "juan@example.com" });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.email).toBe("juan@example.com");
-      }
-    });
-
-    it("treats an empty email as omitted", () => {
-      const result = parse({ email: "" });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.email).toBeUndefined();
       }
     });
   });
@@ -222,7 +193,7 @@ describe("bookingSchema", () => {
       }
     });
 
-    it("clears the recipient for EFECTIVO even when one was sent", () => {
+    it("boolean fields validate transferencia without recipientId (EFECTIVO keeps null)", () => {
       const result = parse({
         paymentType: "EFECTIVO",
         recipientId: "recipient-sonia",

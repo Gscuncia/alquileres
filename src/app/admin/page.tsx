@@ -107,6 +107,7 @@ export default async function AdminDashboardPage({
           checkIn: { lt: toInstant },
         },
         orderBy: { checkIn: "asc" },
+        include: { guest: { select: { firstName: true, lastName: true } } },
       }),
       prisma.expense.findMany({
         where: { date: { gte: fromInstant, lt: toInstant } },
@@ -117,6 +118,7 @@ export default async function AdminDashboardPage({
           checkIn: { lt: movesEnd },
         },
         orderBy: { checkIn: "asc" },
+        include: { guest: { select: { firstName: true, lastName: true } } },
       }),
       prisma.booking.findMany({
         where: {
@@ -124,6 +126,7 @@ export default async function AdminDashboardPage({
           checkIn: { lt: trendEnd },
         },
         orderBy: { checkIn: "asc" },
+        include: { guest: { select: { firstName: true, lastName: true } } },
       }),
       getAllPropertiesForAdmin(),
     ]);

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getAllPropertiesForAdmin } from "@/lib/properties-db";
 import { formatInTz, toUtc } from "@/lib/datetime";
+import { normalizeForSearch } from "@/lib/search";
 import { deleteBooking } from "@/app/admin/bookings/actions";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 
@@ -41,11 +42,6 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
   const where: {
     propertyId?: string;
     checkIn?: { gte: Date; lt: Date };
-    OR?: Array<
-      | { firstName: { contains: string; mode: "insensitive" } }
-      | { lastName: { contains: string; mode: "insensitive" } }
-      | { dni: { contains: string; mode: "insensitive" } }
-    >;
   } = {};
 
   if (propiedad) {
@@ -57,23 +53,32 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
       ...(hasta ? { lt: endOfDayExclusive(hasta) } : {}),
     } as { gte: Date; lt: Date };
   }
-  if (q) {
-    where.OR = [
-      { firstName: { contains: q, mode: "insensitive" } },
-      { lastName: { contains: q, mode: "insensitive" } },
-      { dni: { contains: q, mode: "insensitive" } },
-    ];
-  }
-  const hasFilters = Boolean(propiedad || desde || hasta || q);
+  const hasStructuredFilters = Boolean(propiedad || desde || hasta);
+  const hasFilters = hasStructuredFilters || Boolean(q);
 
-  const [bookings, properties] = await Promise.all([
+  const [bookingRows, properties] = await Promise.all([
     prisma.booking.findMany({
-      where: hasFilters ? where : undefined,
-      include: { property: true, transferRecipient: true },
+      // Structured filters go to the database; the text query `q` is applied
+      // in TypeScript below (accent-insensitive via normalizeForSearch).
+      where: hasStructuredFilters ? where : undefined,
+      include: { property: true, transferRecipient: true, guest: true },
       orderBy: { checkIn: "desc" },
     }),
     getAllPropertiesForAdmin(),
   ]);
+
+  // Accent- and case-insensitive text search over the guest fields.
+  const bookings = q
+    ? bookingRows.filter((booking) =>
+        [
+          booking.guest.firstName,
+          booking.guest.lastName,
+          booking.guest.dni,
+        ].some((field) =>
+          normalizeForSearch(field).includes(normalizeForSearch(q)),
+        ),
+      )
+    : bookingRows;
 
   return (
     <div className="space-y-6">
@@ -179,9 +184,9 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
               <tr key={booking.id}>
                 <td className={`${tableCellClasses} text-ink`}>{booking.property.title}</td>
                 <td className={tableCellClasses}>
-                  {booking.firstName} {booking.lastName}
+                  {booking.guest.firstName} {booking.guest.lastName}
                 </td>
-                <td className={tableCellClasses}>{booking.dni}</td>
+                <td className={tableCellClasses}>{booking.guest.dni}</td>
                 <td className={tableCellClasses}>{formatInTz(booking.checkIn)}</td>
                 <td className={tableCellClasses}>{formatInTz(booking.checkOut)}</td>
                 <td className={tableCellClasses}>

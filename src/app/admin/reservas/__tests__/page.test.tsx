@@ -31,9 +31,7 @@ const sampleBooking = {
   propertyId: "p-depto-1",
   property: { id: "p-depto-1", title: "Depto 1" },
   transferRecipient: null,
-  firstName: "Juan",
-  lastName: "Pérez",
-  dni: "32456778",
+  guest: { id: "g-1", firstName: "Juan", lastName: "Pérez", dni: "32456778" },
   checkIn: new Date("2026-10-10T12:00:00-03:00"),
   checkOut: new Date("2026-10-13T10:00:00-03:00"),
   pricePerNight: 150,
@@ -46,9 +44,7 @@ const sampleTransferBooking = {
   propertyId: "p-casita",
   property: { id: "p-casita", title: "Casita" },
   transferRecipient: { id: "r-1", name: "Sonia" },
-  firstName: "María",
-  lastName: "López",
-  dni: "12345678",
+  guest: { id: "g-2", firstName: "María", lastName: "López", dni: "12345678" },
   paymentType: "TRANSFERENCIA" as const,
 };
 
@@ -62,19 +58,24 @@ describe("ReservasPage filters", () => {
       { id: "p-depto-1", title: "Depto 1" },
       { id: "p-casita", title: "Casita" },
     ]);
-    mocks.bookingFindMany.mockResolvedValue([sampleBooking, sampleTransferBooking]);
+    mocks.bookingFindMany.mockResolvedValue([
+      sampleBooking,
+      sampleTransferBooking,
+    ]);
   });
 
-  it("lists all bookings without a where clause when no filters are applied", async () => {
+  it("reservas list rows render guest firstName lastName and dni", async () => {
     render(await ReservasPage({ searchParams: {} }));
 
     expect(mocks.bookingFindMany).toHaveBeenCalledWith({
       where: undefined,
-      include: { property: true, transferRecipient: true },
+      include: { property: true, transferRecipient: true, guest: true },
       orderBy: { checkIn: "desc" },
     });
     expect(screen.getByText("Juan Pérez")).toBeInTheDocument();
+    expect(screen.getByText("32456778")).toBeInTheDocument();
     expect(screen.getByText("María López")).toBeInTheDocument();
+    expect(screen.getByText("12345678")).toBeInTheDocument();
     // "Depto 1" appears in the table cell and in the filter's <option>.
     expect(screen.getAllByText("Depto 1")).toHaveLength(2);
     // Transferencia shows its destinatario; efectivo does not.
@@ -97,7 +98,7 @@ describe("ReservasPage filters", () => {
 
     expect(mocks.bookingFindMany).toHaveBeenCalledWith({
       where: expect.objectContaining({ propertyId: "p-depto-1" }),
-      include: { property: true, transferRecipient: true },
+      include: { property: true, transferRecipient: true, guest: true },
       orderBy: { checkIn: "desc" },
     });
   });
@@ -122,23 +123,27 @@ describe("ReservasPage filters", () => {
     );
   });
 
-  it("searches client name and DNI case-insensitively ('perez' finds 'Pérez')", async () => {
+  it("reservas search 'perez' matches the guest via normalizeForSearch in TypeScript (no DB OR filter)", async () => {
     render(await ReservasPage({ searchParams: { q: "perez" } }));
 
-    expect(mocks.bookingFindMany).toHaveBeenCalledWith({
-      where: {
-        OR: [
-          { firstName: { contains: "perez", mode: "insensitive" } },
-          { lastName: { contains: "perez", mode: "insensitive" } },
-          { dni: { contains: "perez", mode: "insensitive" } },
-        ],
-      },
-      include: { property: true, transferRecipient: true },
-      orderBy: { checkIn: "desc" },
-    });
+    // The text query never reaches the database: structured filters only.
+    const call = mocks.bookingFindMany.mock.calls[0][0];
+    expect(call.where).toBeUndefined();
+
+    // The in-memory filter matches the accented "Pérez" from "perez" and
+    // discards the non-matching booking.
+    expect(screen.getByText("Juan Pérez")).toBeInTheDocument();
+    expect(screen.queryByText("María López")).not.toBeInTheDocument();
   });
 
-  it("ignores invalid date strings instead of erroring", async () => {
+  it("reservas search by dni fragment matches through the guest fields", async () => {
+    render(await ReservasPage({ searchParams: { q: "32456" } }));
+
+    expect(screen.getByText("Juan Pérez")).toBeInTheDocument();
+    expect(screen.queryByText("María López")).not.toBeInTheDocument();
+  });
+
+  it("ignore invalid date strings instead of erroring", async () => {
     render(
       await ReservasPage({ searchParams: { desde: "no-es-fecha" } }),
     );
@@ -147,7 +152,7 @@ describe("ReservasPage filters", () => {
     expect(call.where).toBeUndefined();
   });
 
-  it("links each booking to its agenda edit view", async () => {
+  it("edit links unchanged: each booking links to its agenda edit view", async () => {
     render(await ReservasPage({ searchParams: {} }));
 
     expect(

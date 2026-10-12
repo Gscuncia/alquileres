@@ -30,18 +30,7 @@ const timeSlot = (label: string) =>
 export const bookingSchema = z
   .object({
     propertyId: requiredText("La propiedad es obligatoria."),
-    firstName: requiredText("El nombre es obligatorio."),
-    lastName: requiredText("El apellido es obligatorio."),
-    dni: requiredText("El DNI es obligatorio.").regex(/^\d{7,8}$/, {
-      message: "El DNI debe tener entre 7 y 8 dígitos.",
-    }),
-    phone: requiredText("El teléfono es obligatorio."),
-    email: z
-      .string()
-      .trim()
-      .email({ message: "El email no tiene un formato válido." })
-      .or(z.literal(""))
-      .optional(),
+    guestId: requiredText("El huésped es obligatorio."),
     checkInDate: date("ingreso"),
     checkInTime: timeSlot("ingreso"),
     checkOutDate: date("egreso"),
@@ -96,7 +85,6 @@ export const bookingSchema = z
     // EFECTIVO never persists a recipient; TRANSFERENCIA keeps the chosen one.
     recipientId:
       data.paymentType === "TRANSFERENCIA" ? data.recipientId || undefined : undefined,
-    email: data.email || undefined,
   }));
 
 export type BookingInput = z.output<typeof bookingSchema>;

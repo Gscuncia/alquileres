@@ -7,12 +7,14 @@ import {
   TopNav,
 } from "@/components/design-system";
 import { LOCATION_ADDRESS } from "@/lib/location";
-import { properties } from "@/lib/properties";
+import { getPublishedProperties } from "@/lib/properties-db";
 
 const GOOGLE_REVIEWS_URL =
   "https://www.google.com/travel/search?q=alquileres%20anita%20google&g2lb=4965990%2C72471280%2C72573224%2C72647020%2C72686036%2C72803964%2C72882230%2C73064764%2C121529350%2C121608706%2C121738283%2C121762713%2C121921501%2C121951222%2C122078727%2C122093071&hl=es-419&gl=ar&ssta=1&ts=CAEaKwopEicyJTB4OTU5YzFiNWZiYjcxNDRlNToweGZlMzM4Y2M5N2M5ZjJmOTc&qs=CAEyFENnc0lsOV84NUplWjQ1bi1BUkFCOAI&ap=ugEHcmV2aWV3cw&ictx=111&ved=0CAAQ5JsGahcKEwiQsOOMuLSXAxUAAAAAHQAAAAAQCg";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const properties = await getPublishedProperties();
+
   return (
     <div className="min-h-screen bg-canvas">
       <TopNav />
@@ -28,7 +30,7 @@ export default function LandingPage() {
             {properties.map((property) => (
               <PropertyCard
                 key={property.id}
-                href={`/propiedades/${property.id}`}
+                href={`/propiedades/${property.slug}`}
                 title={property.location}
                 image={property.images[0]}
                 imageAlt={property.title}

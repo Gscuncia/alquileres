@@ -8,19 +8,24 @@ import {
 } from "@/components/design-system";
 import { Gallery } from "@/components/property/Gallery";
 import { ContactCard } from "@/components/property/ContactCard";
-import { properties, getPropertyById } from "@/lib/properties";
-import { StarIcon } from "@/components/design-system/icons";
+import { getAllPropertiesForAdmin, getPropertyBySlug } from "@/lib/properties-db";
 
-export function generateStaticParams(): { id: string }[] {
-  return properties.map((property) => ({ id: property.id }));
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  try {
+    const properties = await getAllPropertiesForAdmin();
+    return properties.map((property) => ({ slug: property.slug }));
+  } catch {
+    // Build must succeed without a database; slugs render on demand.
+    return [];
+  }
 }
 
 interface PropertyPageProps {
-  params: { id: string };
+  params: { slug: string };
 }
 
-export function generateMetadata({ params }: PropertyPageProps) {
-  const property = getPropertyById(params.id);
+export async function generateMetadata({ params }: PropertyPageProps) {
+  const property = await getPropertyBySlug(params.slug);
   if (!property) {
     return { title: "Alojamiento no encontrado | Alquileres Anita" };
   }
@@ -30,12 +35,14 @@ export function generateMetadata({ params }: PropertyPageProps) {
   };
 }
 
-export default function PropertyPage({ params }: PropertyPageProps) {
-  const property = getPropertyById(params.id);
+export default async function PropertyPage({ params }: PropertyPageProps) {
+  const property = await getPropertyBySlug(params.slug);
 
   if (!property) {
     notFound();
   }
+
+  const paragraphs = property.description.split("\n\n");
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -51,11 +58,6 @@ export default function PropertyPage({ params }: PropertyPageProps) {
         <h1 className="text-display-xl font-bold text-ink">{property.title}</h1>
 
         <div className="mt-2 flex flex-wrap items-center gap-2 text-body-sm text-ink">
-          <span className="flex items-center gap-1">
-            <StarIcon className="h-4 w-4" />
-            {property.rating}
-          </span>
-          <span>·</span>
           <span>{property.location}</span>
           <span>·</span>
           <span>
@@ -75,7 +77,7 @@ export default function PropertyPage({ params }: PropertyPageProps) {
                 Acerca de este alojamiento
               </h2>
               <div className="mt-4 space-y-4">
-                {property.description.map((paragraph, index) => (
+                {paragraphs.map((paragraph, index) => (
                   <p key={index} className="text-body-md text-body">
                     {paragraph}
                   </p>
@@ -92,18 +94,6 @@ export default function PropertyPage({ params }: PropertyPageProps) {
                   <AmenityIcon key={amenity} label={amenity} />
                 ))}
               </div>
-            </section>
-
-            <section className="mt-8 border-t border-hairline pt-8">
-              <h2 className="text-display-md font-bold text-ink">
-                Anfitrión
-              </h2>
-              <p className="mt-2 text-body-md text-body">
-                {property.host.name}
-              </p>
-              <p className="text-body-sm text-muted">
-                {property.host.email}
-              </p>
             </section>
           </div>
 

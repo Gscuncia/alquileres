@@ -44,11 +44,11 @@ describe("AdminLayout", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/dashboard content/i)).toBeInTheDocument();
 
-    // Sub-nav tabs: Panel · Propiedades · Reservas · Destinatarios · Gastos.
+    // Sub-nav tabs: Panel · Propiedades · Reservas · Huéspedes · Destinatarios · Gastos.
     const nav = screen.getByRole("navigation", {
       name: /secciones del panel/i,
     });
-    for (const tab of ["Panel", "Propiedades", "Reservas", "Destinatarios", "Gastos"]) {
+    for (const tab of ["Panel", "Propiedades", "Reservas", "Huéspedes", "Destinatarios", "Gastos"]) {
       expect(screen.getByText(tab)).toBeInTheDocument();
     }
     expect(

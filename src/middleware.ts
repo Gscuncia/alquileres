@@ -11,6 +11,10 @@ export default auth((req) => {
   if (isAdminRoute && !isAuthenticated) {
     return Response.redirect(new URL("/auth/signin", nextUrl.origin));
   }
+
+  if (isAdminRoute && req.auth?.user?.role !== "ADMIN") {
+    return Response.redirect(new URL("/auth/access-denied", nextUrl.origin));
+  }
 });
 
 export const config = {

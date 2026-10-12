@@ -25,19 +25,20 @@ describe("middleware", () => {
     return middlewareModule.default as unknown as (req: MiddlewareRequest) => Response | undefined;
   }
 
-  function buildRequest(pathname: string, authenticated = false): MiddlewareRequest {
+  function buildRequest(
+    pathname: string,
+    user?: { id: string; email: string; role: string },
+  ): MiddlewareRequest {
     const url = new URL(`http://localhost:3000${pathname}`);
     return {
       nextUrl: url,
-      auth: authenticated
-        ? { user: { id: "1", email: "admin@alquileresanita.com.ar", role: "ADMIN" } }
-        : null,
+      auth: user ? { user } : null,
     } as unknown as MiddlewareRequest;
   }
 
   it("redirects unauthenticated requests from /admin to /auth/signin", async () => {
     const middleware = await loadMiddleware();
-    const req = buildRequest("/admin/dashboard", false);
+    const req = buildRequest("/admin/dashboard");
 
     const res = middleware(req);
 
@@ -46,9 +47,28 @@ describe("middleware", () => {
     expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/signin");
   });
 
-  it("allows authenticated requests to /admin", async () => {
+  it("redirects authenticated OPERATIVE users to /auth/access-denied", async () => {
     const middleware = await loadMiddleware();
-    const req = buildRequest("/admin/dashboard", true);
+    const req = buildRequest("/admin/reservas", {
+      id: "2",
+      email: "operative@alquileresanita.com.ar",
+      role: "OPERATIVE",
+    });
+
+    const res = middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/access-denied");
+  });
+
+  it("allows authenticated ADMIN requests to /admin", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin/dashboard", {
+      id: "1",
+      email: "admin@alquileresanita.com.ar",
+      role: "ADMIN",
+    });
 
     const res = middleware(req);
 

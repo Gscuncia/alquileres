@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/require-admin";
 import { SignOutButton } from "@/components/auth/signout-button";
 
 export default async function AdminLayout({
@@ -7,11 +6,7 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/auth/signin");
-  }
+  const session = await requireAdmin();
 
   return (
     <div className="min-h-screen bg-canvas">

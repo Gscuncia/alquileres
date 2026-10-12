@@ -16,6 +16,8 @@ export interface PropertyDetail extends PropertyPublic {
   capacity: number;
   bedrooms: number;
   bathrooms: number;
+  published: boolean;
+  sortOrder: number;
 }
 
 function toPublic(property: Property): PropertyPublic {
@@ -37,6 +39,8 @@ function toDetail(property: Property): PropertyDetail {
     capacity: property.capacity,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
+    published: property.published,
+    sortOrder: property.sortOrder,
   };
 }
 

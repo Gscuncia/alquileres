@@ -2,18 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Alquileres Anita — generated from tokens.json */
+:root,
+[data-theme="light"] {
+  --primary: #ff1717;
+  --primary-active: #d90f0f;
+  --primary-disabled: #ffd1d1;
+  --primary-error-text: #c13515;
+  --primary-error-text-hover: #b32505;
+  --luxe: #460479;
+  --plus: #92174d;
+  --ink: #222222;
+  --body: #3f3f3f;
+  --muted: #6a6a6a;
+  --muted-soft: #929292;
+  --hairline: #dddddd;
+  --hairline-soft: #ebebeb;
+  --border-strong: #c1c1c1;
+  --canvas: #ffffff;
+  --surface-soft: #f7f7f7;
+  --surface-card: var(--canvas);
+  --surface-strong: #f2f2f2;
+  --cream: #fff9ed;
+  --cream-strong: #f6ecd6;
+  --cream-line: #ecdfc4;
+  --sky: #cbecfd;
+  --header-bg: var(--cream);
+  --on-primary: #ffffff;
+  --on-dark: #ffffff;
+  --legal-link: #428bff;
+  --star-rating: var(--ink);
+  --scrim: #000000;
+  --shadow-card: rgba(0, 0, 0, 0.02) 0 0 0 1px, rgba(0, 0, 0, 0.04) 0 2px 6px 0,
+    rgba(0, 0, 0, 0.1) 0 4px 8px 0;
+}
+
 :root {
-  --color-primary: #ff385c;
-  --color-primary-active: #e00b41;
-  --color-ink: #222222;
-  --color-body: #3f3f3f;
-  --color-muted: #6a6a6a;
-  --color-canvas: #ffffff;
-  --color-surface-soft: #f7f7f7;
-  --color-hairline: #dddddd;
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 64px;
+  --radius-none: 0px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+  --scrim-opacity: 0.5;
+  --size-button: 48px;
+  --size-input: 56px;
+  --size-search: 64px;
+  --size-nav: 80px;
+  --size-day: 40px;
+  --size-icon-sm: 32px;
+  --size-icon-md: 40px;
+  --font-sans: var(--font-inter), "Airbnb Cereal VF", Circular, -apple-system,
+    system-ui, Roboto, "Helvetica Neue", sans-serif;
+}
+
+html {
+  color-scheme: light;
 }
 
 body {
-  color: var(--color-ink);
-  background: var(--color-canvas);
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--canvas);
 }

@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/require-admin";
 import { SignOutButton } from "@/components/auth/signout-button";
+import { AdminNavTabs } from "@/components/admin/AdminNavTabs";
 
 export default async function AdminLayout({
   children,
@@ -21,6 +22,11 @@ export default async function AdminLayout({
           <SignOutButton />
         </div>
       </header>
+      <nav className="border-b border-hairline bg-canvas">
+        <div className="mx-auto max-w-7xl px-6 py-3">
+          <AdminNavTabs />
+        </div>
+      </nav>
       <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
     </div>
   );

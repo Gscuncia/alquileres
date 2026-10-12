@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import AdminLayout from "@/app/admin/layout";
 
 const mockAuth = vi.fn();
+const mockUsePathname = vi.fn(() => "/admin");
 const mockRedirect = vi.hoisted(() =>
   vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT ${path}`);
@@ -14,6 +15,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => mockUsePathname(),
   redirect: (path: string) => mockRedirect(path),
 }));
 
@@ -41,6 +43,24 @@ describe("AdminLayout", () => {
       screen.getByRole("button", { name: /cerrar sesión/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/dashboard content/i)).toBeInTheDocument();
+
+    // Sub-nav tabs: Panel · Propiedades · Reservas · Destinatarios · Gastos.
+    const nav = screen.getByRole("navigation", {
+      name: /secciones del panel/i,
+    });
+    for (const tab of ["Panel", "Propiedades", "Reservas", "Destinatarios", "Gastos"]) {
+      expect(screen.getByText(tab)).toBeInTheDocument();
+    }
+    expect(
+      screen.getByText("Panel").closest("a"),
+    ).toHaveAttribute("href", "/admin");
+    expect(
+      screen.getByText("Reservas").closest("a"),
+    ).toHaveAttribute("href", "/admin/reservas");
+    expect(
+      screen.getByText("Gastos").closest("a"),
+    ).toHaveAttribute("href", "/admin/gastos");
+    expect(nav).toBeInTheDocument();
   });
 
   it("redirects unauthenticated users to sign-in", async () => {

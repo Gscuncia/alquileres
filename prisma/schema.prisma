@@ -108,17 +108,27 @@ model TransferRecipient {
   @@map("transfer_recipients")
 }
 
+model Guest {
+  id        String   @id @default(cuid(2))
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  dni       String   @unique
+  phone     String
+  email     String?
+  notes     String?
+  bookings  Booking[]
+
+  @@map("guests")
+}
+
 model Booking {
   id                  String             @id @default(cuid(2))
   propertyId          String             @map("property_id")
   property            Property           @relation(fields: [propertyId], references: [id], onDelete: Restrict)
   transferRecipientId String?            @map("transfer_recipient_id")
   transferRecipient   TransferRecipient? @relation(fields: [transferRecipientId], references: [id], onDelete: Restrict)
-  firstName           String             @map("first_name")
-  lastName            String             @map("last_name")
-  dni                 String
-  phone               String
-  email               String?
+  guestId             String             @map("guest_id")
+  guest               Guest              @relation(fields: [guestId], references: [id], onDelete: Restrict)
   checkIn             DateTime           @map("check_in")
   checkOut            DateTime           @map("check_out")
   pricePerNight       Decimal            @map("price_per_night") @db.Decimal(12, 2)
@@ -130,6 +140,7 @@ model Booking {
   createdAt           DateTime           @default(now()) @map("created_at")
 
   @@index([propertyId, checkIn, checkOut])
+  @@index([guestId])
   @@map("bookings")
 }
 

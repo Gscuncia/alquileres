@@ -67,3 +67,82 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("verificationtokens")
 }
+
+enum PaymentType {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+enum ExpenseType {
+  MANTENIMIENTO
+  CONSORCIO
+}
+
+model Property {
+  id               String   @id @default(cuid(2))
+  slug             String   @unique
+  title            String
+  location         String
+  shortDescription String   @map("short_description")
+  description      String   @db.Text
+  capacity         Int
+  bedrooms         Int
+  bathrooms        Int
+  amenities        String[]
+  images           String[]
+  published        Boolean  @default(true)
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  bookings         Booking[]
+  expenses         Expense[]
+
+  @@map("properties")
+}
+
+model TransferRecipient {
+  id       String    @id @default(cuid(2))
+  name     String    @unique
+  bookings Booking[]
+
+  @@map("transfer_recipients")
+}
+
+model Booking {
+  id                  String             @id @default(cuid(2))
+  propertyId          String             @map("property_id")
+  property            Property           @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  transferRecipientId String?            @map("transfer_recipient_id")
+  transferRecipient   TransferRecipient? @relation(fields: [transferRecipientId], references: [id], onDelete: Restrict)
+  firstName           String             @map("first_name")
+  lastName            String             @map("last_name")
+  dni                 String
+  phone               String
+  email               String?
+  checkIn             DateTime           @map("check_in")
+  checkOut            DateTime           @map("check_out")
+  pricePerNight       Decimal            @map("price_per_night") @db.Decimal(12, 2)
+  depositAmount       Decimal            @default(0) @map("deposit_amount") @db.Decimal(12, 2)
+  paymentType         PaymentType        @map("payment_type")
+  paymentMethod       String?            @map("payment_method")
+  notes               String?
+  settledAt           DateTime?          @map("settled_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+
+  @@index([propertyId, checkIn, checkOut])
+  @@map("bookings")
+}
+
+model Expense {
+  id          String      @id @default(cuid(2))
+  propertyId  String?     @map("property_id")
+  property    Property?   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  type        ExpenseType
+  category    String
+  description String?
+  amount      Decimal     @db.Decimal(12, 2)
+  date        DateTime
+
+  @@index([date])
+  @@map("expenses")
+}

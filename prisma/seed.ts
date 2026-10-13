@@ -125,11 +125,28 @@ export async function seedRecipients(prisma: PrismaClient) {
   console.log(`Transfer recipient ready: ${sonia.name}`);
 }
 
+export async function seedExpenseTypes(prisma: PrismaClient) {
+  const expenseTypes = [
+    { name: "Mantenimiento", requiresProperty: true },
+    { name: "Consorcio", requiresProperty: false },
+  ];
+
+  for (const expenseType of expenseTypes) {
+    const created = await prisma.expenseType.upsert({
+      where: { name: expenseType.name },
+      update: {},
+      create: expenseType,
+    });
+    console.log(`Expense type ready: ${created.name}`);
+  }
+}
+
 export async function seed(prisma: PrismaClient) {
   // Each seed section is idempotent independently; no early global return.
   await seedAdmin(prisma);
   await seedProperties(prisma);
   await seedRecipients(prisma);
+  await seedExpenseTypes(prisma);
 }
 
 async function main() {

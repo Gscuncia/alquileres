@@ -21,4 +21,11 @@ describe("SignInForm", () => {
     expect(screen.getByRole("heading", { name: /iniciar sesión/i })).toBeInTheDocument();
     expect(screen.getByText(/acceso administrativo de alquileres anita/i)).toBeInTheDocument();
   });
+
+  it("links to the password recovery page", () => {
+    render(<SignInForm callbackUrl="/admin" />);
+
+    const link = screen.getByRole("link", { name: /olvidaste tu contraseña/i });
+    expect(link).toHaveAttribute("href", "/auth/recover");
+  });
 });

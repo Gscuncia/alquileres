@@ -92,4 +92,38 @@ describe("mail helper", () => {
     const options = mockSendMail.mock.calls[0][0];
     expect(options.html).toContain("https://alquileresanita.com.ar/auth/signin");
   });
+
+  it("sends a reset email with the token link and origin", async () => {
+    process.env.GMAIL_USER = "test@gmail.com";
+    process.env.GMAIL_APP_PASSWORD = "app-password";
+
+    const { sendResetEmail } = await importMailModule();
+
+    mockSendMail.mockResolvedValue({});
+    await sendResetEmail("user@example.com", "reset-token-123", "https://alquileresanita.com.ar");
+
+    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    const options = mockSendMail.mock.calls[0][0];
+    expect(options.from).toContain("Alquileres Anita");
+    expect(options.to).toBe("user@example.com");
+    expect(options.subject).toBe("Recuperación de contraseña");
+    expect(options.text).toContain("reset-token-123");
+    expect(options.text).toContain("https://alquileresanita.com.ar/auth/reset?token=reset-token-123");
+    expect(options.html).toContain("/auth/reset?token=reset-token-123");
+  });
+
+  it("falls back to a console warning when sending a reset email without SMTP", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { sendResetEmail } = await importMailModule();
+
+    await sendResetEmail("user@example.com", "reset-token-123", "http://localhost:3000");
+
+    expect(mockSendMail).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("SMTP not configured"),
+    );
+
+    warnSpy.mockRestore();
+  });
 });

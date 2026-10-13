@@ -76,3 +76,55 @@ export async function sendWelcomeEmail(
     );
   }
 }
+
+/**
+ * Send a password-reset email with a time-limited token link.
+ * Falls back to logging the message in development when SMTP is not configured.
+ */
+export async function sendResetEmail(
+  email: string,
+  token: string,
+  origin: string,
+): Promise<void> {
+  const resetUrl = `${origin}/auth/reset?token=${token}`;
+
+  const mailOptions: SendMailOptions = {
+    from: `"Alquileres Anita" <${GMAIL_USER ?? "no-reply@alquileresanita.com.ar"}>`,
+    to: email,
+    subject: "Recuperación de contraseña",
+    text: [
+      "Hola,",
+      "",
+      "Recibimos una solicitud para restablecer la contraseña de tu cuenta.",
+      "",
+      `Hacé clic en el siguiente enlace o copialo en tu navegador:`,
+      resetUrl,
+      "",
+      "El enlace expira en 1 hora.",
+      "",
+      "Si no solicitaste este cambio, ignorá este mensaje.",
+      "",
+      "Saludos,",
+      "Equipo Alquileres Anita",
+    ].join("\n"),
+    html: [
+      "<p>Hola,</p>",
+      "<p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>",
+      `<p><a href=\"${resetUrl}\">Restablecer contraseña</a></p>`,
+      "<p>Si el enlace no funciona, copiá y pegá la siguiente dirección en tu navegador:</p>",
+      `<p><code>${resetUrl}</code></p>`,
+      "<p>El enlace expira en 1 hora.</p>",
+      "<p>Si no solicitaste este cambio, ignorá este mensaje.</p>",
+      "<p>Saludos,<br>Equipo Alquileres Anita</p>",
+    ].join("\n"),
+  };
+
+  if (transporter) {
+    await transporter.sendMail(mailOptions);
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[mail] SMTP not configured. Reset email would have been sent to ${email}`,
+    );
+  }
+}

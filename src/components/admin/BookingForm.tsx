@@ -164,7 +164,7 @@ export function BookingForm({
             defaultValue={values.checkOutDate}
           />
         </AdminField>
-        <AdminField label="Hora de egreso" htmlFor="checkOutTime" error={fieldErrors.checkOut}>
+        <AdminField label="Hora de egreso" htmlFor="checkOutTime" error={fieldErrors.checkOutTime}>
           <AdminInput
             as="select"
             id="checkOutTime"

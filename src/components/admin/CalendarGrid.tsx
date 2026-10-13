@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminEmptyState } from "./primitives";
 import { formatInTz, toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
 
 export interface CalendarEvent {
@@ -189,7 +190,7 @@ export function buildDayBars(
 }
 
 function cellClasses(): string {
-  return "flex h-28 flex-col items-start gap-1 rounded-sm p-1 text-caption-sm bg-surface-soft";
+  return "flex h-28 flex-col items-start gap-1 rounded-md p-1 text-caption-sm bg-surface-soft";
 }
 
 function DayCell({
@@ -284,14 +285,16 @@ function MonthBookingsList({
 }) {
   if (events.length === 0) {
     return (
-      <p className="text-caption-sm text-muted">
-        No hay reservas que superpongan con este mes.
-      </p>
+      <AdminEmptyState>
+        <p className="text-caption-sm text-muted">
+          No hay reservas que superpongan con este mes.
+        </p>
+      </AdminEmptyState>
     );
   }
 
   return (
-    <ul className="divide-y divide-hairline rounded-md border border-hairline">
+    <ul className="divide-y divide-hairline rounded-md border border-hairline bg-surface-card shadow-card">
       {events.map((event) => {
         const description = `${event.guest.firstName} ${event.guest.lastName} — ${formatInTz(
           event.checkIn,
@@ -448,14 +451,16 @@ export function DayDetailList({
 
   if (covering.length === 0) {
     return (
-      <p className="text-caption-sm text-muted">
-        No hay reservas activas en ese día.
-      </p>
+      <AdminEmptyState>
+        <p className="text-caption-sm text-muted">
+          No hay reservas activas en ese día.
+        </p>
+      </AdminEmptyState>
     );
   }
 
   return (
-    <ol className="divide-y divide-hairline rounded-md border border-hairline">
+    <ol className="divide-y divide-hairline rounded-md border border-hairline bg-surface-card shadow-card">
       {covering.map((event) => (
         <li
           key={event.id}

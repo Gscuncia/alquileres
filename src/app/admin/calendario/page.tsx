@@ -10,6 +10,12 @@ import {
 } from "@/components/admin/CalendarGrid";
 import { BookingForm } from "@/components/admin/BookingForm";
 import { createBooking, updateBooking } from "@/app/admin/bookings/actions";
+import {
+  AdminPageHeader,
+  AdminField,
+  AdminInput,
+} from "@/components/admin/primitives";
+import { Button } from "@/components/design-system";
 
 const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -179,25 +185,20 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-display-sm font-semibold text-ink">Calendario</h2>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <AdminPageHeader title="Calendario" />
         <form method="get" action={basePath} className="flex items-end gap-2">
           {/* Month and current property filter travel with every refetch. */}
           {searchParams?.mes && (
             <input type="hidden" name="mes" value={month} />
           )}
-          <div>
-            <label
-              htmlFor="propiedad"
-              className="block text-caption-sm font-medium text-ink mb-1"
-            >
-              Propiedad
-            </label>
-            <select
+          <AdminField label="Propiedad" htmlFor="propiedad">
+            <AdminInput
+              as="select"
               id="propiedad"
               name="propiedad"
               defaultValue={propiedadParam}
-              className="w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+              className="min-w-[12rem]"
             >
               <option value="todas">Todas</option>
               {properties.map((property) => (
@@ -205,36 +206,35 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
                   {property.title}
                 </option>
               ))}
-            </select>
-          </div>
-          <button
-            type="submit"
-            className="rounded-sm border border-ink bg-canvas px-4 py-2 text-button-sm font-medium text-ink hover:bg-surface-soft"
-          >
+            </AdminInput>
+          </AdminField>
+          <Button type="submit" variant="secondary">
             Aplicar
-          </button>
+          </Button>
         </form>
       </div>
 
       <div className="flex items-center justify-between">
-        <Link
-          href={`${basePath}?mes=${monthParam(prevMonthDate)}&propiedad=${propiedadParam}`}
-          className="text-button-sm text-ink underline-offset-2 hover:underline"
-        >
-          ← Mes anterior
-        </Link>
+        <Button asChild variant="tertiary">
+          <Link
+            href={`${basePath}?mes=${monthParam(prevMonthDate)}&propiedad=${propiedadParam}`}
+          >
+            ← Mes anterior
+          </Link>
+        </Button>
         <span className="text-body-md font-semibold capitalize text-ink">
           {formatInTz(
             new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1),
             { month: "long", year: "numeric" },
           )}
         </span>
-        <Link
-          href={`${basePath}?mes=${monthParam(nextMonthDate)}&propiedad=${propiedadParam}`}
-          className="text-button-sm text-ink underline-offset-2 hover:underline"
-        >
-          Mes siguiente →
-        </Link>
+        <Button asChild variant="tertiary">
+          <Link
+            href={`${basePath}?mes=${monthParam(nextMonthDate)}&propiedad=${propiedadParam}`}
+          >
+            Mes siguiente →
+          </Link>
+        </Button>
       </div>
 
       <CalendarGrid
@@ -258,12 +258,9 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
             <h3 className="text-title-md font-semibold text-ink">
               Nueva reserva
             </h3>
-            <Link
-              href={`${basePath}${currentParams}`}
-              className="text-button-sm text-muted underline-offset-2 hover:underline"
-            >
-              Cancelar
-            </Link>
+            <Button asChild variant="tertiary">
+              <Link href={`${basePath}${currentParams}`}>Cancelar</Link>
+            </Button>
           </div>
           <BookingForm
             action={createBooking}
@@ -288,12 +285,9 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
             <h3 className="text-title-md font-semibold text-ink">
               Editar reserva
             </h3>
-            <Link
-              href={`${basePath}${currentParams}`}
-              className="text-button-sm text-muted underline-offset-2 hover:underline"
-            >
-              Cancelar edición
-            </Link>
+            <Button asChild variant="tertiary">
+              <Link href={`${basePath}${currentParams}`}>Cancelar edición</Link>
+            </Button>
           </div>
           <BookingForm
             action={updateBooking}

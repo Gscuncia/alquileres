@@ -15,6 +15,14 @@ import {
   toBookingSnapshot,
   toExpenseSnapshot,
 } from "@/lib/metrics";
+import {
+  AdminPanel,
+  AdminEmptyState,
+  AdminPageHeader,
+  AdminField,
+  AdminInput,
+} from "@/components/admin/primitives";
+import { Button } from "@/components/design-system";
 
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -45,21 +53,6 @@ function trendMonthLabel(monthKey: string): string {
   // `${key}-01` read at UTC-00:00 is exact for a calendar-month label; TZ is
   // pinned to UTC so formatting cannot shift the month.
   return trendLabelFormatter.format(new Date(`${monthKey}-01T00:00:00Z`));
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-md border border-hairline bg-canvas p-4">
-      <h3 className="mb-3 text-title-md font-semibold text-ink">{title}</h3>
-      {children}
-    </section>
-  );
 }
 
 export default async function AdminDashboardPage({
@@ -155,79 +148,57 @@ export default async function AdminDashboardPage({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-display-sm font-semibold text-ink">
-        Panel de administración
-      </h2>
+      <AdminPageHeader title="Panel de administración" />
 
       <form
         method="get"
         action="/admin"
         className="grid grid-cols-1 items-end gap-4 rounded-md border border-hairline bg-canvas p-4 md:grid-cols-3"
       >
-        <div>
-          <label
-            htmlFor="from"
-            className="block text-caption-sm font-medium text-ink mb-1"
-          >
-            Desde
-          </label>
-          <input
+        <AdminField label="Desde" htmlFor="from">
+          <AdminInput
             id="from"
             name="from"
             type="date"
             defaultValue={from}
-            className="w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
           />
-        </div>
-        <div>
-          <label
-            htmlFor="to"
-            className="block text-caption-sm font-medium text-ink mb-1"
-          >
-            Hasta
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Hasta" htmlFor="to">
+          <AdminInput
             id="to"
             name="to"
             type="date"
             defaultValue={to}
-            className="w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
           />
-        </div>
+        </AdminField>
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            className="rounded-sm border border-ink bg-canvas px-4 py-2 text-button-sm font-medium text-ink hover:bg-surface-soft"
-          >
+          <Button type="submit" variant="secondary">
             Aplicar
-          </button>
-          <Link
-            href="/admin"
-            className="px-2 py-2 text-button-sm text-muted underline-offset-2 hover:underline"
-          >
-            Mes actual
-          </Link>
+          </Button>
+          <Button asChild variant="tertiary">
+            <Link href="/admin">Mes actual</Link>
+          </Button>
         </div>
       </form>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Panel title="Señas pendientes">
+        <AdminPanel title="Señas pendientes">
           <p className="text-display-sm font-semibold text-ink">
             {formatMoney(pending)}
           </p>
           <p className="mt-1 text-caption-sm text-muted">
             Depositado a cuenta de reservas del período.
           </p>
-        </Panel>
-        <Panel title="Ingresos del período">
+        </AdminPanel>
+        <AdminPanel title="Ingresos del período">
           <p className="text-display-sm font-semibold text-ink">
             {formatMoney(totalRevenue)}
           </p>
           <p className="mt-1 text-caption-sm text-muted">
             {periodNights} noches en el período seleccionado.
           </p>
-        </Panel>
-        <Panel title="Gastos vs ingresos">
+        </AdminPanel>
+        <AdminPanel title="Gastos vs ingresos">
           <p className="text-body-md text-body">
             Ingresos: <span className="text-ink">{formatMoney(totalRevenue)}</span>
           </p>
@@ -237,10 +208,10 @@ export default async function AdminDashboardPage({
           <p className="mt-1 text-body-md font-medium text-ink">
             Resultado: {formatMoney(totalRevenue - totalExpenses)}
           </p>
-        </Panel>
+        </AdminPanel>
       </div>
 
-      <Panel title="Ingresos y ocupación por propiedad">
+      <AdminPanel title="Ingresos y ocupación por propiedad">
         <table className="w-full">
           <thead>
             <tr className="bg-surface-soft text-left">
@@ -276,10 +247,10 @@ export default async function AdminDashboardPage({
             )}
           </tbody>
         </table>
-      </Panel>
+      </AdminPanel>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Panel title="Ingresos próximos">
+        <AdminPanel title="Ingresos próximos">
           {moves.checkIns.length === 0 ? (
             <p className="text-body-md text-body">
               Sin ingresos en los próximos 14 días.
@@ -303,8 +274,8 @@ export default async function AdminDashboardPage({
               ))}
             </ul>
           )}
-        </Panel>
-        <Panel title="Egresos próximos">
+        </AdminPanel>
+        <AdminPanel title="Egresos próximos">
           {moves.checkOuts.length === 0 ? (
             <p className="text-body-md text-body">
               Sin egresos en los próximos 14 días.
@@ -328,10 +299,10 @@ export default async function AdminDashboardPage({
               ))}
             </ul>
           )}
-        </Panel>
+        </AdminPanel>
       </div>
 
-      <Panel title="Tendencia de ingresos (últimos 6 meses)">
+      <AdminPanel title="Tendencia de ingresos (últimos 6 meses)">
         <ul className="space-y-2">
           {trend.map((point) => (
             <li key={point.month} className="flex items-center gap-3">
@@ -352,7 +323,7 @@ export default async function AdminDashboardPage({
             </li>
           ))}
         </ul>
-      </Panel>
+      </AdminPanel>
     </div>
   );
 }

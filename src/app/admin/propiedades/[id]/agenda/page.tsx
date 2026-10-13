@@ -9,6 +9,8 @@ import {
 } from "@/components/admin/CalendarGrid";
 import { BookingForm, type BookingFormValues } from "@/components/admin/BookingForm";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
+import { AdminPanel, AdminPageHeader } from "@/components/admin/primitives";
+import { Button } from "@/components/design-system";
 import { createBooking, deleteBooking, updateBooking } from "@/app/admin/bookings/actions";
 
 const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -132,12 +134,9 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
   return (
     <div className="space-y-8">
       <div>
-        <Link
-          href="/admin/propiedades"
-          className="text-button-sm text-ink underline-offset-2 hover:underline"
-        >
-          ← Volver a propiedades
-        </Link>
+        <Button asChild variant="tertiary">
+          <Link href="/admin/propiedades">← Volver a propiedades</Link>
+        </Button>
         <h2 className="mt-2 text-display-sm font-semibold text-ink">
           Agenda: {property.title}
         </h2>
@@ -153,58 +152,59 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
         showMonthList
       />
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-title-md font-semibold text-ink">
-            {editing ? "Editar reserva" : "Nueva reserva"}
-          </h3>
-          {editing && (
-            <Link
-              href={currentPath}
-              className="text-button-sm text-muted underline-offset-2 hover:underline"
-            >
-              Cancelar edición
-            </Link>
-          )}
+      <AdminPanel>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-title-md font-semibold text-ink">
+              {editing ? "Editar reserva" : "Nueva reserva"}
+            </h3>
+            {editing && (
+              <Button asChild variant="tertiary">
+                <Link href={currentPath}>Cancelar edición</Link>
+              </Button>
+            )}
+          </div>
+          <BookingForm
+            action={editing ? updateBooking : createBooking}
+            initialValues={initialValues}
+            guests={guests.map(({ id, firstName, lastName, dni, phone }) => ({
+              id,
+              firstName,
+              lastName,
+              dni,
+              phone,
+            }))}
+            recipients={recipients.map(({ id, name }) => ({ id, name }))}
+            submitLabel={editing ? "Guardar cambios" : "Crear reserva"}
+          />
         </div>
-        <BookingForm
-          action={editing ? updateBooking : createBooking}
-          initialValues={initialValues}
-          guests={guests.map(({ id, firstName, lastName, dni, phone }) => ({
-            id,
-            firstName,
-            lastName,
-            dni,
-            phone,
-          }))}
-          recipients={recipients.map(({ id, name }) => ({ id, name }))}
-          submitLabel={editing ? "Guardar cambios" : "Crear reserva"}
-        />
-      </div>
+      </AdminPanel>
 
       {bookings.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-title-md font-semibold text-ink">
-            Reservas del mes
-          </h3>
-          <ul className="divide-y divide-hairline rounded-md border border-hairline">
-            {bookings.map((booking) => (
-              <li
-                key={booking.id}
-                className="flex items-center justify-between gap-4 px-4 py-3"
-              >
-                <span className="text-body-sm text-body">
-                  {booking.guest.firstName} {booking.guest.lastName} · ${Number(booking.pricePerNight)}/noche
-                </span>
-                <form action={deleteBooking}>
-                  <input type="hidden" name="id" value={booking.id} />
-                  <input type="hidden" name="redirectTo" value={currentPath} />
-                  <ConfirmButton />
-                </form>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <AdminPanel>
+          <div className="space-y-3">
+            <h3 className="text-title-md font-semibold text-ink">
+              Reservas del mes
+            </h3>
+            <ul className="divide-y divide-hairline rounded-md border border-hairline">
+              {bookings.map((booking) => (
+                <li
+                  key={booking.id}
+                  className="flex items-center justify-between gap-4 px-4 py-3"
+                >
+                  <span className="text-body-sm text-body">
+                    {booking.guest.firstName} {booking.guest.lastName} · ${Number(booking.pricePerNight)}/noche
+                  </span>
+                  <form action={deleteBooking}>
+                    <input type="hidden" name="id" value={booking.id} />
+                    <input type="hidden" name="redirectTo" value={currentPath} />
+                    <ConfirmButton />
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </AdminPanel>
       )}
     </div>
   );

@@ -51,6 +51,7 @@ function buildPropertyInput(formData: FormData) {
     bathrooms: number("bathrooms"),
     amenities: list("amenities"),
     images: list("images"),
+    color: text("color"),
     published,
     sortOrder: number("sortOrder"),
   };

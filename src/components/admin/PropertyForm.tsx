@@ -17,6 +17,8 @@ export interface PropertyFormValues {
   bathrooms: string;
   amenities: string[];
   images: string[];
+  /** Custom calendar color (`#rrggbb`) or "" for the palette fallback. */
+  color: string;
   published: boolean;
   sortOrder: string;
 }
@@ -38,6 +40,7 @@ export const EMPTY_PROPERTY_FORM: PropertyFormValues = {
   bathrooms: "",
   amenities: [],
   images: [],
+  color: "",
   published: true,
   sortOrder: "0",
 };
@@ -140,6 +143,9 @@ export function PropertyForm({
   );
   const [images, setImages] = useState<string[]>(
     initialValues?.images ?? EMPTY_PROPERTY_FORM.images,
+  );
+  const [customColor, setCustomColor] = useState(
+    Boolean(initialValues?.color),
   );
 
   const values = { ...EMPTY_PROPERTY_FORM, ...initialValues };
@@ -341,6 +347,37 @@ export function PropertyForm({
         error={fieldErrors.images}
         placeholder="https://…"
       />
+
+      <fieldset>
+        <legend className={labelClasses}>Color en el calendario</legend>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={customColor}
+              onChange={(event) => setCustomColor(event.target.checked)}
+              className="h-4 w-4"
+              aria-label="Usar color personalizado"
+            />
+            <span className="text-body-sm text-ink">Color personalizado</span>
+          </label>
+          {customColor ? (
+            <input
+              type="color"
+              name="color"
+              defaultValue={values.color || "#460479"}
+              aria-label="Color personalizado de la propiedad"
+              className="h-10 w-16 cursor-pointer rounded-sm border border-hairline bg-canvas p-1"
+            />
+          ) : (
+            <input type="hidden" name="color" value="" />
+          )}
+          <p className="text-caption-sm text-muted">
+            Se usa para las barras y fichas de esta propiedad en el Calendario.
+          </p>
+        </div>
+        <FieldError message={fieldErrors.color} />
+      </fieldset>
 
       <div>
         <label htmlFor="published" className="inline-flex items-center gap-2">

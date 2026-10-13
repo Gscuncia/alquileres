@@ -279,6 +279,35 @@ describe("CalendarGrid", () => {
     expect(barOf(13)).toBeNull();
   });
 
+  it("custom property colors override the palette in chips and bars", () => {
+    const { container } = render(
+      <CalendarGrid
+        month="2026-10"
+        events={[event({ property: { id: "p-2", title: "Casita" } })]}
+        properties={[
+          ...properties.slice(0, 1),
+          { id: "p-2", title: "Casita", color: "#ff8800" },
+        ]}
+        mode="todas"
+        chipHref={() => "#"}
+        dayHref={() => "#"}
+      />,
+    );
+
+    const grid = container.querySelector('[role="grid"]') as HTMLElement;
+
+    // Check-in chip (Oct 10) uses the custom background + readable text.
+    const chip = Array.from(grid.querySelectorAll("a")).find(
+      (a) => a.textContent?.includes("→ 12:00 Juan"),
+    ) as HTMLElement;
+    expect(chip.style.backgroundColor).toBe("rgb(255, 136, 0)");
+
+    // Intermediate-day bar (Oct 11) uses the custom background.
+    const barCell = grid.children[7 + 3 + 11 - 1] as HTMLElement;
+    const bar = barCell.querySelector("a.h-2") as HTMLElement;
+    expect(bar.style.backgroundColor).toBe("rgb(255, 136, 0)");
+  });
+
   it("buildDayBars keeps one bar per booking per intermediate day; endpoints stay chip-only", () => {
     const stayA = event({
       id: "b-a",

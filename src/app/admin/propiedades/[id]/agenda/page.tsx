@@ -72,7 +72,7 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
 
   const property = await prisma.property.findUnique({
     where: { id: params.id },
-    select: { id: true, title: true },
+    select: { id: true, title: true, color: true },
   });
   if (!property) {
     notFound();
@@ -146,7 +146,7 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
       <CalendarGrid
         month={month}
         events={calendarEvents}
-        properties={[{ id: property.id, title: property.title }]}
+        properties={[{ id: property.id, title: property.title, color: property.color }]}
         mode="single"
         chipHref={(bookingId) => `${basePath}${monthParam}&reserva=${bookingId}`}
         dayHref={(dayStr) => `${basePath}?fecha=${dayStr}`}

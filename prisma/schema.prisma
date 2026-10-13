@@ -87,6 +87,8 @@ model Property {
   images           String[]
   published        Boolean  @default(true)
   sortOrder        Int      @default(0) @map("sort_order")
+  /// Optional custom calendar color (hex, e.g. "#460479"); null = palette.
+  color            String?
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
   bookings         Booking[]

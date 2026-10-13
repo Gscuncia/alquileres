@@ -240,7 +240,11 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
       <CalendarGrid
         month={month}
         events={events}
-        properties={[...properties.map(({ id, title }) => ({ id, title }))]}
+        properties={properties.map(({ id, title, color }) => ({
+          id,
+          title,
+          color,
+        }))}
         mode={specific ? "single" : "todas"}
         chipHref={chipHref}
         dayHref={dayHref}

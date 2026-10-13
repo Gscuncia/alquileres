@@ -57,6 +57,7 @@ export default async function EditPropertyPage({
           bathrooms: String(property.bathrooms),
           amenities: property.amenities,
           images: property.images,
+          color: property.color ?? "",
           published: property.published,
           sortOrder: String(property.sortOrder),
         }}

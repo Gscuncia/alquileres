@@ -48,6 +48,7 @@ export default async function AdminPropertiesPage({
             <tr className="bg-surface-soft text-left">
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Orden</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Título</th>
+              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Color</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Slug</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Capacidad</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Estado</th>
@@ -59,6 +60,21 @@ export default async function AdminPropertiesPage({
               <tr key={property.id}>
                 <td className={tableCellClasses}>{property.sortOrder}</td>
                 <td className={`${tableCellClasses} text-ink`}>{property.title}</td>
+                <td className={tableCellClasses}>
+                  {property.color ? (
+                    <span
+                      title={property.color}
+                      aria-label={`Color ${property.color}`}
+                      className="inline-block h-4 w-4 rounded-full border border-hairline"
+                      style={{ backgroundColor: property.color }}
+                    />
+                  ) : (
+                    <span
+                      title="Color automático del calendario"
+                      className="inline-block h-4 w-4 rounded-full border border-hairline bg-surface-soft"
+                    />
+                  )}
+                </td>
                 <td className={tableCellClasses}>{property.slug}</td>
                 <td className={tableCellClasses}>{property.capacity}</td>
                 <td className={tableCellClasses}>

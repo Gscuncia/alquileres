@@ -16,6 +16,21 @@ const requiredText = (message: string) =>
     .trim()
     .min(1, { message });
 
+/**
+ * Optional custom calendar color: a `#rrggbb` hex string, or empty/absent
+ * which normalizes to null (calendar palette fallback).
+ */
+const hexColor = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/, {
+    message:
+      "El color debe ser un código hexadecimal válido (por ejemplo #460479).",
+  })
+  .or(z.literal(""))
+  .optional()
+  .transform((value) => (value ? value.toLowerCase() : null));
+
 export const propertySchema = z.object({
   title: requiredText("El título es obligatorio."),
   slug: requiredText("El slug es obligatorio.").regex(
@@ -56,6 +71,7 @@ export const propertySchema = z.object({
     .min(0, { message: "Los baños deben ser un número entero mayor o igual a 0." }),
   amenities: z.array(z.string().trim().min(1)).optional(),
   images: z.array(httpUrl).optional(),
+  color: hexColor,
   published: z.boolean().default(true),
   sortOrder: z
     .number({

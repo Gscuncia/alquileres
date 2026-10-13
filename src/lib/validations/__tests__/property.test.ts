@@ -25,6 +25,46 @@ describe("propertySchema", () => {
     }
   });
 
+  it("accepts a custom calendar color and normalizes it to lowercase", () => {
+    const result = propertySchema.safeParse({
+      ...validProperty,
+      color: "#4604FF",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.color).toBe("#4604ff");
+    }
+  });
+
+  it("normalizes an empty color to null (palette fallback)", () => {
+    const result = propertySchema.safeParse({
+      ...validProperty,
+      color: "",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.color).toBeNull();
+    }
+  });
+
+  it("rejects an invalid color hex naming the field", () => {
+    const result = propertySchema.safeParse({
+      ...validProperty,
+      color: "celeste",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const colorErrors = result.error.issues.filter(
+        (issue) => issue.path[0] === "color",
+      );
+      expect(colorErrors.length).toBeGreaterThan(0);
+      expect(colorErrors[0].message).toMatch(/hexadecimal/i);
+    }
+  });
+
   it("rejects a non-URL image naming the field", () => {
     const result = propertySchema.safeParse({
       ...validProperty,

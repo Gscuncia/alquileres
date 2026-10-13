@@ -18,6 +18,8 @@ export interface PropertyDetail extends PropertyPublic {
   bathrooms: number;
   published: boolean;
   sortOrder: number;
+  /** Custom calendar color (hex) or null for the palette fallback. */
+  color: string | null;
 }
 
 function toPublic(property: Property): PropertyPublic {
@@ -41,6 +43,7 @@ function toDetail(property: Property): PropertyDetail {
     bathrooms: property.bathrooms,
     published: property.published,
     sortOrder: property.sortOrder,
+    color: property.color,
   };
 }
 

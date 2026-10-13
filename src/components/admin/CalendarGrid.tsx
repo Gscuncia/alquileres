@@ -15,23 +15,34 @@ export interface CalendarChip {
   text: string;
   /** Stable palette slot resolved from the property order. */
   paletteIndex: number;
+  /** Custom property color (hex) overriding the palette when set. */
+  color?: string | null;
 }
 
 export interface CalendarBar {
   bookingId: string;
   /** Stable palette slot resolved from the property order. */
   paletteIndex: number;
+  /** Custom property color (hex) overriding the palette when set. */
+  color?: string | null;
   /** Tooltip/aria label: `Juan Pérez · Depto 1`. */
   label: string;
 }
 
 export type CalendarGridMode = "todas" | "single";
 
+export interface CalendarProperty {
+  id: string;
+  title: string;
+  /** Custom calendar color (hex) or null for the palette fallback. */
+  color?: string | null;
+}
+
 interface CalendarGridProps {
   /** `YYYY-MM`, validated by the calling page. */
   month: string;
   events: CalendarEvent[];
-  properties: { id: string; title: string }[];
+  properties: CalendarProperty[];
   mode: CalendarGridMode;
   chipHref(bookingId: string): string;
   /** `YYYY-MM-DD` target for the day link and the overflow chip. */
@@ -65,6 +76,23 @@ function paletteIndexFor(properties: { id: string }[], propertyId: string): numb
   return index % CHIP_PALETTE.length;
 }
 
+/** Custom property color (hex) when set; undefined keeps the palette fallback. */
+function colorFor(
+  properties: CalendarProperty[],
+  propertyId: string,
+): string | undefined {
+  return properties.find((property) => property.id === propertyId)?.color ?? undefined;
+}
+
+/** Readable text color over a custom background hex. */
+export function textColorFor(hex: string): string {
+  const red = Number.parseInt(hex.slice(1, 3), 16);
+  const green = Number.parseInt(hex.slice(3, 5), 16);
+  const blue = Number.parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+  return luminance > 0.6 ? "#1f2937" : "#ffffff";
+}
+
 function chipClass(paletteIndex: number, mode: CalendarGridMode): string {
   if (mode === "single") return "bg-sky text-ink";
   return CHIP_PALETTE[paletteIndex] ?? CHIP_PALETTE[0];
@@ -78,7 +106,7 @@ function chipClass(paletteIndex: number, mode: CalendarGridMode): string {
  */
 export function buildDayChips(
   events: CalendarEvent[],
-  properties: { id: string }[],
+  properties: CalendarProperty[],
 ): Map<string, CalendarChip[]> {
   const chips = new Map<string, CalendarChip[]>();
 
@@ -90,6 +118,7 @@ export function buildDayChips(
 
   for (const event of events) {
     const paletteIndex = paletteIndexFor(properties, event.property.id);
+    const color = colorFor(properties, event.property.id);
     const checkInDay = toDateStr(event.checkIn);
     const checkOutDay = toDateStr(event.checkOut);
 
@@ -97,6 +126,7 @@ export function buildDayChips(
       bookingId: event.id,
       text: `→ ${toTimeStr(event.checkIn)} ${event.guest.firstName}`,
       paletteIndex,
+      color,
     });
 
     // Same-day events carry only the check-in chip.
@@ -105,6 +135,7 @@ export function buildDayChips(
         bookingId: event.id,
         text: `← ${toTimeStr(event.checkOut)} ${event.guest.firstName}`,
         paletteIndex,
+        color,
       });
     }
   }
@@ -125,7 +156,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  */
 export function buildDayBars(
   events: CalendarEvent[],
-  properties: { id: string; title: string }[],
+  properties: CalendarProperty[],
 ): Map<string, CalendarBar[]> {
   const bars = new Map<string, CalendarBar[]>();
 
@@ -137,6 +168,7 @@ export function buildDayBars(
 
   for (const event of events) {
     const paletteIndex = paletteIndexFor(properties, event.property.id);
+    const color = colorFor(properties, event.property.id);
     const label = `${event.guest.firstName} ${event.guest.lastName} · ${event.property.title}`;
 
     // Start the day AFTER the check-in day; stop the day BEFORE the
@@ -148,7 +180,7 @@ export function buildDayBars(
       toUtc(toDateStr(event.checkOut), "00:00").getTime() - DAY_MS,
     );
     while (cursor.getTime() <= lastDay.getTime()) {
-      push(toDateStr(cursor), { bookingId: event.id, paletteIndex, label });
+      push(toDateStr(cursor), { bookingId: event.id, paletteIndex, color, label });
       cursor = new Date(cursor.getTime() + DAY_MS);
     }
   }
@@ -196,10 +228,12 @@ function DayCell({
               href={chipHref(bar.bookingId)}
               aria-label={`Reserva de ${bar.label}`}
               title={bar.label}
-              className={`h-2 w-full rounded-full ${chipClass(
-                bar.paletteIndex,
-                mode,
-              )}`}
+              className={
+                bar.color
+                  ? "h-2 w-full rounded-full"
+                  : `h-2 w-full rounded-full ${chipClass(bar.paletteIndex, mode)}`
+              }
+              style={bar.color ? { backgroundColor: bar.color } : undefined}
             >
               {/* Intentionally empty: the bar is the visual. */}
               &nbsp;
@@ -211,10 +245,19 @@ function DayCell({
         <Link
           key={`${dayStr}-${chip.bookingId}-${chip.text}`}
           href={chipHref(chip.bookingId)}
-          className={`w-full truncate rounded-sm px-1 py-0.5 text-caption-sm ${chipClass(
-            chip.paletteIndex,
-            mode,
-          )}`}
+          className={
+            chip.color
+              ? "w-full truncate rounded-sm px-1 py-0.5 text-caption-sm"
+              : `w-full truncate rounded-sm px-1 py-0.5 text-caption-sm ${chipClass(
+                  chip.paletteIndex,
+                  mode,
+                )}`
+          }
+          style={
+            chip.color
+              ? { backgroundColor: chip.color, color: textColorFor(chip.color) }
+              : undefined
+          }
           title={chip.text}
         >
           {chip.text}
@@ -349,9 +392,18 @@ export function CalendarGrid({
             >
               <span
                 aria-hidden="true"
-                className={`inline-block h-3 w-3 rounded-full ${
-                  CHIP_PALETTE[index % CHIP_PALETTE.length]
-                }`}
+                className={
+                  property.color
+                    ? "inline-block h-3 w-3 rounded-full"
+                    : `inline-block h-3 w-3 rounded-full ${
+                        CHIP_PALETTE[index % CHIP_PALETTE.length]
+                      }`
+                }
+                style={
+                  property.color
+                    ? { backgroundColor: property.color }
+                    : undefined
+                }
               />
               {property.title}
             </li>

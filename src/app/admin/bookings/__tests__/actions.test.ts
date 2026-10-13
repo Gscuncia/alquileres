@@ -84,7 +84,7 @@ describe("booking actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue({
-      user: { id: "user-1", email: "admin@alquileresanita.com.ar", role: "ADMIN" },
+      user: { id: "user-1", email: "admin@alquileresanita.com.ar", role: "ADMIN", isDefaultAdmin: true },
     });
     mocks.queryRaw.mockResolvedValue([]);
     mocks.transaction.mockImplementation(
@@ -99,7 +99,7 @@ describe("booking actions", () => {
 
   it("throws 'No autorizado' when the caller is not an admin", async () => {
     mocks.auth.mockResolvedValue({
-      user: { id: "user-2", email: "operative@alquileresanita.com.ar", role: "OPERATIVE" },
+      user: { id: "user-2", email: "operative@alquileresanita.com.ar", role: "OPERATIVE", isDefaultAdmin: false },
     });
 
     await expect(

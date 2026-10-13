@@ -86,8 +86,13 @@ export const TopNav: React.FC<TopNavProps> = ({
             <span className="mt-2 h-1 w-16 rounded-full bg-primary md:w-20" aria-hidden="true" />
           </div>
 
-          {/* Spacer to balance the logo column */}
-          <div className="hidden w-[88px] md:block lg:w-[112px]" aria-hidden="true" />
+          {/* Login link in the top-right corner */}
+          <Link
+            href="/auth/signin"
+            className="hidden rounded-sm px-3 py-2 text-caption font-medium text-muted transition-all hover:bg-cream-strong hover:text-ink md:inline-flex md:text-nav-link"
+          >
+            Login
+          </Link>
         </div>
 
         {/* Navigation row */}

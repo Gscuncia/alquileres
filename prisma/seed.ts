@@ -1,26 +1,75 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const ADMIN_EMAIL = "admin@alquileresanita.com.ar";
-const ADMIN_PASSWORD = "admin123"; // Change after first login.
-
-export async function seedAdmin(prisma: PrismaClient) {
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-
-  const admin = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
+export async function seedRoles(prisma: PrismaClient) {
+  const adminRole = await prisma.role.upsert({
+    where: { name: "Administrador" },
     update: {},
     create: {
-      email: ADMIN_EMAIL,
       name: "Administrador",
-      passwordHash,
-      role: Role.ADMIN,
+      allowedTabs: [
+        "panel",
+        "calendario",
+        "propiedades",
+        "reservas",
+        "huespedes",
+        "destinatarios",
+        "gastos",
+      ],
+      isDefaultAdmin: true,
     },
   });
 
-  console.log(`Admin user ready: ${admin.email} (${admin.role})`);
+  const operativeRole = await prisma.role.upsert({
+    where: { name: "Gestion diaria" },
+    update: {},
+    create: {
+      name: "Gestion diaria",
+      allowedTabs: ["calendario", "gastos"],
+      isDefaultAdmin: false,
+    },
+  });
+
+  console.log(`Roles ready: ${adminRole.name}, ${operativeRole.name}`);
+  return { adminRole, operativeRole };
+}
+
+export async function seedAdmin(prisma: PrismaClient) {
+  const email = process.env.DEFAULT_ADMIN_EMAIL;
+  const password = process.env.DEFAULT_ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    console.warn(
+      "DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD must be set to seed the default admin.",
+    );
+    return null;
+  }
+
+  const adminRole = await prisma.role.findUnique({
+    where: { name: "Administrador" },
+  });
+
+  if (!adminRole) {
+    throw new Error('Default "Administrador" role not found. Run seedRoles first.');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const admin = await prisma.user.upsert({
+    where: { email },
+    update: {},
+    create: {
+      email,
+      name: "Administrador",
+      passwordHash,
+      roleId: adminRole.id,
+    },
+  });
+
+  console.log(`Admin user ready: ${admin.email}`);
+  return admin;
 }
 
 // Unsplash URLs are whitelisted in next.config.mjs (images.unsplash.com only).
@@ -143,6 +192,7 @@ export async function seedExpenseTypes(prisma: PrismaClient) {
 
 export async function seed(prisma: PrismaClient) {
   // Each seed section is idempotent independently; no early global return.
+  await seedRoles(prisma);
   await seedAdmin(prisma);
   await seedProperties(prisma);
   await seedRecipients(prisma);

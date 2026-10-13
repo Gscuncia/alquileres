@@ -1,5 +1,4 @@
 import type { NextAuthConfig } from "next-auth";
-import type { Role } from "@prisma/client";
 
 export default {
   providers: [],
@@ -10,10 +9,20 @@ export default {
     strategy: "jwt",
   },
   callbacks: {
+    signIn: async ({ user }) => {
+      if (user?.mustChangePassword === true) {
+        return "/auth/change-password";
+      }
+      return true;
+    },
     jwt: async ({ token, user }) => {
       if (user) {
         token.sub = user.id;
-        token.role = user.role;
+        token.roleId = user.roleId;
+        token.roleName = user.roleName;
+        token.allowedTabs = user.allowedTabs;
+        token.isDefaultAdmin = user.isDefaultAdmin;
+        token.mustChangePassword = user.mustChangePassword;
       }
       return token;
     },
@@ -21,9 +30,12 @@ export default {
       if (token?.sub) {
         session.user.id = token.sub;
       }
-      const role = token.role as Role | undefined;
-      if (role) {
-        session.user.role = role;
+      if (token?.roleId) {
+        session.user.roleId = token.roleId as string;
+        session.user.roleName = token.roleName as string;
+        session.user.allowedTabs = (token.allowedTabs ?? []) as string[];
+        session.user.isDefaultAdmin = token.isDefaultAdmin === true;
+        session.user.mustChangePassword = (token.mustChangePassword ?? false) as boolean;
       }
       return session;
     },

@@ -5,7 +5,16 @@
 import { describe, it, expect, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
-type MiddlewareRequest = NextRequest & { auth: { user: { id: string; email: string; role: string } } | null };
+type UserClaims = {
+  id: string;
+  email: string;
+  roleName: string;
+  roleId: string;
+  allowedTabs: string[];
+  isDefaultAdmin: boolean;
+};
+
+type MiddlewareRequest = NextRequest & { auth: { user: UserClaims } | null };
 
 const authConfig = {};
 
@@ -19,6 +28,18 @@ vi.mock("next-auth", () => ({
   }),
 }));
 
+function makeUser(overrides: Partial<UserClaims> = {}): UserClaims {
+  return {
+    id: "user-1",
+    email: "user@alquileresanita.com.ar",
+    roleName: "Gestion diaria",
+    roleId: "role-2",
+    allowedTabs: ["calendario", "gastos"],
+    isDefaultAdmin: false,
+    ...overrides,
+  };
+}
+
 describe("middleware", () => {
   async function loadMiddleware() {
     const middlewareModule = await import("@/middleware");
@@ -27,7 +48,7 @@ describe("middleware", () => {
 
   function buildRequest(
     pathname: string,
-    user?: { id: string; email: string; role: string },
+    user?: UserClaims,
   ): MiddlewareRequest {
     const url = new URL(`http://localhost:3000${pathname}`);
     return {
@@ -47,31 +68,91 @@ describe("middleware", () => {
     expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/signin");
   });
 
-  it("redirects authenticated OPERATIVE users to /auth/access-denied", async () => {
+  it("allows default admins to access any /admin route", async () => {
     const middleware = await loadMiddleware();
-    const req = buildRequest("/admin/reservas", {
-      id: "2",
-      email: "operative@alquileresanita.com.ar",
-      role: "OPERATIVE",
-    });
+    const req = buildRequest("/admin/reservas", makeUser({
+      roleName: "Administrador",
+      roleId: "role-1",
+      allowedTabs: ["panel", "calendario", "propiedades", "reservas", "huespedes", "destinatarios", "gastos"],
+      isDefaultAdmin: true,
+    }));
+
+    const res = middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it("redirects users to /admin when they request a tab not in allowedTabs", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin/reservas", makeUser());
 
     const res = middleware(req);
 
     expect(res).toBeInstanceOf(Response);
     expect(res?.status).toBe(302);
-    expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/access-denied");
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
   });
 
-  it("allows authenticated ADMIN requests to /admin", async () => {
+  it("allows users to access tabs listed in allowedTabs", async () => {
     const middleware = await loadMiddleware();
-    const req = buildRequest("/admin/dashboard", {
-      id: "1",
-      email: "admin@alquileresanita.com.ar",
-      role: "ADMIN",
-    });
+    const req = buildRequest("/admin/calendario", makeUser());
 
     const res = middleware(req);
 
     expect(res).toBeUndefined();
+  });
+
+  it("allows users to access nested routes within an allowed tab", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin/gastos/2026-01", makeUser());
+
+    const res = middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it("redirects users to /admin for unknown admin sub-routes", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin/unknown", makeUser());
+
+    const res = middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+  });
+
+  it("redirects non-admins from /admin/usuarios even if the tab is in allowedTabs", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin/usuarios",
+      makeUser({ allowedTabs: ["calendario", "gastos", "usuarios"] }),
+    );
+
+    const res = middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+  });
+
+  it("allows default admins to access /admin/usuarios and /admin/roles", async () => {
+    const middleware = await loadMiddleware();
+
+    const usersReq = buildRequest("/admin/usuarios", makeUser({
+      roleName: "Administrador",
+      roleId: "role-1",
+      allowedTabs: ["panel", "calendario", "propiedades", "reservas", "huespedes", "destinatarios", "gastos"],
+      isDefaultAdmin: true,
+    }));
+    const rolesReq = buildRequest("/admin/roles", makeUser({
+      roleName: "Administrador",
+      roleId: "role-1",
+      allowedTabs: ["panel", "calendario", "propiedades", "reservas", "huespedes", "destinatarios", "gastos"],
+      isDefaultAdmin: true,
+    }));
+
+    expect(middleware(usersReq)).toBeUndefined();
+    expect(middleware(rolesReq)).toBeUndefined();
   });
 });

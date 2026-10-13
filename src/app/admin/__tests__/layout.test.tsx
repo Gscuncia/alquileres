@@ -19,33 +19,63 @@ vi.mock("next/navigation", () => ({
   redirect: (path: string) => mockRedirect(path),
 }));
 
+vi.mock("next/image", () => ({
+  default: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
+    <img src={src} alt={alt} className={className} />
+  ),
+}));
+
 vi.mock("@/components/auth/signout-button", () => ({
   SignOutButton: () => <button type="button">Cerrar sesión</button>,
 }));
 
+function makeAdminSession() {
+  return {
+    user: {
+      id: "user-1",
+      email: "admin@alquileresanita.com.ar",
+      roleId: "role-1",
+      roleName: "Administrador",
+      allowedTabs: [
+        "panel",
+        "calendario",
+        "propiedades",
+        "reservas",
+        "huespedes",
+        "destinatarios",
+        "gastos",
+      ],
+      isDefaultAdmin: true,
+      mustChangePassword: false,
+    },
+  };
+}
+
 describe("AdminLayout", () => {
   it("renders navigation, user info, and logout for an authenticated admin", async () => {
-    mockAuth.mockResolvedValue({
-      user: {
-        id: "user-1",
-        email: "admin@alquileresanita.com.ar",
-        role: "ADMIN",
-      },
-    });
+    mockAuth.mockResolvedValue(makeAdminSession());
 
     render(await AdminLayout({ children: <div>Dashboard content</div> }));
 
     expect(screen.getByRole("heading", { name: /admin/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/admin@alquileresanita.com.ar · admin/i),
+      screen.getByText(/admin@alquileresanita.com.ar · Administrador/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /cerrar sesión/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/dashboard content/i)).toBeInTheDocument();
 
-    // Layout uses public content width and padding.
+    // Main-site logo and background treatment are applied to the admin header.
     const header = screen.getByRole("banner");
+    expect(header).toHaveClass("bg-header-bg");
+    expect(header).toHaveClass("border-cream-line");
+    expect(header).toHaveClass("shadow-sm");
+    const logo = screen.getByRole("img", { name: /alquileres anita/i });
+    expect(logo).toBeInTheDocument();
+    expect(logo.closest("a")).toHaveAttribute("href", "/");
+
+    // Layout uses public content width and padding.
     const main = screen.getByRole("main");
     expect(header).toHaveClass("px-4");
     expect(header).toHaveClass("md:px-6");
@@ -76,6 +106,27 @@ describe("AdminLayout", () => {
     expect(nav).toBeInTheDocument();
   });
 
+  it("filters nav tabs for non-admin users based on allowedTabs", async () => {
+    mockAuth.mockResolvedValue({
+      user: {
+        id: "user-2",
+        email: "operative@alquileresanita.com.ar",
+        roleId: "role-2",
+        roleName: "Gestion diaria",
+        allowedTabs: ["calendario", "gastos"],
+        isDefaultAdmin: false,
+        mustChangePassword: false,
+      },
+    });
+
+    render(await AdminLayout({ children: <div>Limited content</div> }));
+
+    expect(screen.getByRole("link", { name: "Calendario" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Gastos" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Propiedades" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Reservas" })).not.toBeInTheDocument();
+  });
+
   it("redirects unauthenticated users to sign-in", async () => {
     mockAuth.mockResolvedValue(null);
 
@@ -84,5 +135,25 @@ describe("AdminLayout", () => {
     ).rejects.toThrow("NEXT_REDIRECT /auth/signin");
 
     expect(mockRedirect).toHaveBeenCalledWith("/auth/signin");
+  });
+
+  it("redirects users with no allowed tabs to access-denied", async () => {
+    mockAuth.mockResolvedValue({
+      user: {
+        id: "user-3",
+        email: "blocked@alquileresanita.com.ar",
+        roleId: "role-3",
+        roleName: "Sin acceso",
+        allowedTabs: [],
+        isDefaultAdmin: false,
+        mustChangePassword: false,
+      },
+    });
+
+    await expect(
+      AdminLayout({ children: <div>Dashboard content</div> }),
+    ).rejects.toThrow("NEXT_REDIRECT /auth/access-denied");
+
+    expect(mockRedirect).toHaveBeenCalledWith("/auth/access-denied");
   });
 });

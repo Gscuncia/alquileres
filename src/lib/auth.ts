@@ -15,7 +15,10 @@ export async function authorize(
     return null;
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { role: true },
+  });
 
   if (!user || !user.passwordHash) {
     return null;
@@ -31,7 +34,11 @@ export async function authorize(
     id: user.id,
     email: user.email,
     name: user.name,
-    role: user.role,
+    roleId: user.roleId,
+    roleName: user.role.name,
+    allowedTabs: user.role.allowedTabs,
+    isDefaultAdmin: user.role.isDefaultAdmin,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 

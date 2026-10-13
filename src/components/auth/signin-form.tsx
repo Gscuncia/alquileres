@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { Button } from "@/components/design-system";
@@ -84,6 +85,15 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
             Ingresar
           </Button>
         </form>
+
+        <p className="mt-4 text-center text-body-sm">
+          <Link
+            href="/auth/recover"
+            className="text-primary underline hover:text-primary-hover"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
       </div>
     </main>
   );

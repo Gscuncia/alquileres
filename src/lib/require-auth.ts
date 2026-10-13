@@ -23,9 +23,9 @@ export function hasTab(session: Session | null, tab: string): boolean {
 
 /**
  * Gate for admin pages/layouts: unauthenticated users go to sign-in;
- * authenticated users without the required tab permission get the
- * access-denied page. When no tab is provided, any authenticated admin
- * user is allowed.
+ * authenticated users without any allowed admin tabs get the access-denied
+ * page. When a tab is provided, the user must have that tab in their role.
+ * Default admins bypass all tab checks.
  */
 export async function requirePermission(tab?: string) {
   const session = await auth();
@@ -34,7 +34,13 @@ export async function requirePermission(tab?: string) {
     redirect("/auth/signin");
   }
 
-  if (tab && !hasTab(session, tab)) {
+  if (isAdmin(session)) {
+    return session;
+  }
+
+  const allowedTabs = session.user.allowedTabs ?? [];
+
+  if (allowedTabs.length === 0 || (tab && !allowedTabs.includes(tab))) {
     redirect("/auth/access-denied");
   }
 

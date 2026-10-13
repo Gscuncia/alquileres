@@ -133,6 +133,16 @@ describe("user actions", () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/usuarios");
     });
 
+    it("assigns exactly one role to the new user", async () => {
+      const result = await createUser(initialState, buildFormData({ roleId: "role-3" }));
+
+      expect(result.ok).toBe(true);
+      const createCall = mocks.userCreate.mock.calls[0][0];
+      expect(createCall.data.roleId).toBe("role-3");
+      expect(createCall.data).not.toHaveProperty("roles");
+      expect(createCall.data).not.toHaveProperty("role");
+    });
+
     it("maps P2002 email conflicts to a Spanish field error", async () => {
       mocks.userCreate.mockRejectedValue({ code: "P2002" });
 

@@ -136,4 +136,24 @@ describe("AdminLayout", () => {
 
     expect(mockRedirect).toHaveBeenCalledWith("/auth/signin");
   });
+
+  it("redirects users with no allowed tabs to access-denied", async () => {
+    mockAuth.mockResolvedValue({
+      user: {
+        id: "user-3",
+        email: "blocked@alquileresanita.com.ar",
+        roleId: "role-3",
+        roleName: "Sin acceso",
+        allowedTabs: [],
+        isDefaultAdmin: false,
+        mustChangePassword: false,
+      },
+    });
+
+    await expect(
+      AdminLayout({ children: <div>Dashboard content</div> }),
+    ).rejects.toThrow("NEXT_REDIRECT /auth/access-denied");
+
+    expect(mockRedirect).toHaveBeenCalledWith("/auth/access-denied");
+  });
 });

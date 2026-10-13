@@ -148,6 +148,7 @@ export function BookingForm({
             id="checkInDate"
             name="checkInDate"
             type="date"
+            required
             defaultValue={values.checkInDate}
             className={inputClasses}
           />
@@ -160,6 +161,7 @@ export function BookingForm({
           <select
             id="checkInTime"
             name="checkInTime"
+            required
             defaultValue={values.checkInTime}
             className={inputClasses}
           >
@@ -179,6 +181,7 @@ export function BookingForm({
             id="checkOutDate"
             name="checkOutDate"
             type="date"
+            required
             defaultValue={values.checkOutDate}
             className={inputClasses}
           />
@@ -191,6 +194,7 @@ export function BookingForm({
           <select
             id="checkOutTime"
             name="checkOutTime"
+            required
             defaultValue={values.checkOutTime}
             className={inputClasses}
           >

@@ -107,7 +107,9 @@ async function withOverlapCheck(
   checkOut: Date,
   excludeId: string | undefined,
 ): Promise<ActionState | null> {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${propertyId}))`;
+  // The lock function returns `void`, which Prisma cannot deserialize
+  // (`Failed to deserialize column of type 'void'`); cast to text.
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${propertyId}))::text AS locked`;
 
   const conflict = await tx.booking.findFirst({
     where: {

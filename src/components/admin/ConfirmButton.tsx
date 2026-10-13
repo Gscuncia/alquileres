@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/design-system";
 
 interface ConfirmButtonProps {
   label?: string;
@@ -27,32 +28,31 @@ export function ConfirmButton({
 
   if (!confirming) {
     return (
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={() => setConfirming(true)}
-        className={`rounded-sm border border-ink bg-canvas px-4 py-2 text-button-sm font-medium text-ink transition-colors hover:bg-surface-soft ${className}`}
+        className={className}
       >
         {label}
-      </button>
+      </Button>
     );
   }
 
   return (
     <span className="inline-flex items-center gap-2">
       <span className="text-button-sm text-ink">{confirmQuestion}</span>
-      <button
-        type="submit"
-        className="rounded-sm bg-primary px-4 py-2 text-button-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
-      >
+      <Button type="submit" variant="primary">
         {confirmLabel}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setConfirming(false)}
-        className="rounded-sm px-2 py-2 text-button-sm text-muted transition-colors hover:bg-surface-soft"
+        className="text-muted"
       >
         {cancelLabel}
-      </button>
+      </Button>
     </span>
   );
 }

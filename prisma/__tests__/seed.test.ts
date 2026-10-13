@@ -1,14 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { seed, seedAdmin, seedProperties, seedRecipients } from "../seed";
+import {
+  seed,
+  seedAdmin,
+  seedProperties,
+  seedRecipients,
+  seedExpenseTypes,
+} from "../seed";
 
 const mockUserUpsert = vi.fn();
 const mockPropertyUpsert = vi.fn();
 const mockRecipientUpsert = vi.fn();
+const mockExpenseTypeUpsert = vi.fn();
 
 const mockPrismaClient = {
   user: { upsert: mockUserUpsert },
   property: { upsert: mockPropertyUpsert },
   transferRecipient: { upsert: mockRecipientUpsert },
+  expenseType: { upsert: mockExpenseTypeUpsert },
 };
 
 vi.mock("bcryptjs", () => ({
@@ -32,6 +40,10 @@ describe("prisma seed", () => {
       ...create,
     }));
     mockRecipientUpsert.mockImplementation(({ where, create }) => ({
+      name: where.name,
+      ...create,
+    }));
+    mockExpenseTypeUpsert.mockImplementation(({ where, create }) => ({
       name: where.name,
       ...create,
     }));
@@ -96,11 +108,39 @@ describe("prisma seed", () => {
     });
   });
 
+  it("seedExpenseTypes upserts idempotent: Mantenimiento (requiresProperty) and Consorcio (general)", async () => {
+    await seedExpenseTypes(mockPrismaClient as unknown as Prisma);
+
+    expect(mockExpenseTypeUpsert.mock.calls.map((call) => call[0])).toEqual([
+      {
+        where: { name: "Mantenimiento" },
+        update: {},
+        create: { name: "Mantenimiento", requiresProperty: true },
+      },
+      {
+        where: { name: "Consorcio" },
+        update: {},
+        create: { name: "Consorcio", requiresProperty: false },
+      },
+    ]);
+  });
+
+  it("calls the sections in order: admin → properties → recipients → expenseTypes", async () => {
+    await seed(mockPrismaClient as unknown as Prisma);
+
+    // Relative ordering across the four upsert families.
+    expect(mockRecipientUpsert.mock.invocationCallOrder[0]).toBeLessThan(
+      mockExpenseTypeUpsert.mock.invocationCallOrder[0],
+    );
+    expect(mockExpenseTypeUpsert).toHaveBeenCalledTimes(2);
+  });
+
   it("is idempotent: running seed twice performs the same upserts and no creates", async () => {
     await seed(mockPrismaClient as unknown as Prisma);
     const firstRunUserCalls = mockUserUpsert.mock.calls.length;
     const firstRunPropertyCalls = mockPropertyUpsert.mock.calls.length;
     const firstRunRecipientCalls = mockRecipientUpsert.mock.calls.length;
+    const firstRunTypeCalls = mockExpenseTypeUpsert.mock.calls.length;
 
     await seed(mockPrismaClient as unknown as Prisma);
 
@@ -109,9 +149,13 @@ describe("prisma seed", () => {
     expect(mockRecipientUpsert).toHaveBeenCalledTimes(
       firstRunRecipientCalls * 2,
     );
+    expect(mockExpenseTypeUpsert).toHaveBeenCalledTimes(firstRunTypeCalls * 2);
 
     // Idempotency relies exclusively on upserts: no findUnique+create path.
     mockPropertyUpsert.mock.calls.forEach((call) => {
+      expect(call[0].update).toEqual({});
+    });
+    mockExpenseTypeUpsert.mock.calls.forEach((call) => {
       expect(call[0].update).toEqual({});
     });
   });
@@ -129,5 +173,6 @@ describe("prisma seed", () => {
     expect(mockUserUpsert).toHaveBeenCalledTimes(1);
     expect(mockPropertyUpsert).toHaveBeenCalledTimes(4);
     expect(mockRecipientUpsert).toHaveBeenCalledTimes(1);
+    expect(mockExpenseTypeUpsert).toHaveBeenCalledTimes(2);
   });
 });

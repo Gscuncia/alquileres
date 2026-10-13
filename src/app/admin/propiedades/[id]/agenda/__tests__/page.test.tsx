@@ -90,7 +90,57 @@ describe("AgendaPage", () => {
     mocks.findBookings.mockResolvedValue([booking({})]);
   });
 
-  it("shows a stay spanning its dates on the month grid", async () => {
+  it("swaps to single-mode CalendarGrid: stay chips + covered days + month list", async () => {
+    await render(
+      await AgendaPage({
+        params: { id: "p-depto-1" },
+        searchParams: { mes: "2026-10" },
+      }),
+    );
+
+    // Arrow chips on the check-in / check-out BA days.
+    expect(screen.getByText(/→ 12:00 Juan/)).toBeInTheDocument();
+    expect(screen.getByText(/← 10:00 Juan/)).toBeInTheDocument();
+
+    // The month booking list (showMonthList) shows the stay with its window.
+    expect(
+      screen.getByText(
+        `Juan Pérez — ${formatInTz(booking({}).checkIn)} → ${formatInTz(booking({}).checkOut)}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("agenda chip opens booking edit via chipHref keeping the agenda ?reserva= target", async () => {
+    await render(
+      await AgendaPage({
+        params: { id: "p-depto-1" },
+        searchParams: { mes: "2026-10" },
+      }),
+    );
+
+    expect(
+      screen.getByText(/→ 12:00 Juan/).closest("a"),
+    ).toHaveAttribute(
+      "href",
+      "/admin/propiedades/p-depto-1/agenda?mes=2026-10&reserva=b-1",
+    );
+  });
+
+  it("agenda day link targets dayHref with fecha prefill", async () => {
+    await render(
+      await AgendaPage({
+        params: { id: "p-depto-1" },
+        searchParams: { mes: "2026-10" },
+      }),
+    );
+
+    expect(screen.getByText("10").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/propiedades/p-depto-1/agenda?fecha=2026-10-10",
+    );
+  });
+
+  it("highlights covered calendar days with the single-mode accent ring", async () => {
     const { container } = await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
@@ -98,24 +148,16 @@ describe("AgendaPage", () => {
       }),
     );
 
-    // Stay Oct 10 12:00 → Oct 13 10:00 highlights its covered calendar days.
+    // Stay Oct 10 12:00 → Oct 13 10:00 covers Oct 10..12 (half-open).
+    // Oct 1 2026 is a Thursday → Monday-first leading blanks = 3.
     const grid = container.querySelector('[role="grid"]') as HTMLElement;
-    const dayCell = (day: string): HTMLElement | undefined =>
-      Array.from(grid.querySelectorAll("div")).find(
-        (cell) => cell.textContent === day && cell.className.includes("h-9"),
-      );
+    const cellOf = (day: number): HTMLElement =>
+      grid.children[7 + 3 + day - 1] as HTMLElement;
 
-    expect(dayCell("10")?.className).toContain("bg-sky");
-    expect(dayCell("11")?.className).toContain("bg-sky");
-    expect(dayCell("12")?.className).toContain("bg-sky");
-    expect(dayCell("9")?.className).not.toContain("bg-sky");
-
-    // The month booking list shows the stay with its check-in/check-out.
-    expect(
-      screen.getByText(
-        `Juan Pérez — ${formatInTz(booking({}).checkIn)} → ${formatInTz(booking({}).checkOut)}`,
-      ),
-    ).toBeInTheDocument();
+    expect(cellOf(10).className).toContain("ring-sky");
+    expect(cellOf(11).className).toContain("ring-sky");
+    expect(cellOf(12).className).toContain("ring-sky");
+    expect(cellOf(9).className).not.toContain("ring-sky");
   });
 
   it("shows back-to-back stays together without a conflict indication", async () => {
@@ -134,8 +176,8 @@ describe("AgendaPage", () => {
       }),
     );
 
-    // Both stays are listed (calendar entries); the calendar has no conflict
-    // state to signal — back-to-back is treated like any other stay.
+    // Both stays are listed (calendar entries included); the calendar has no
+    // conflict state to signal — back-to-back is treated like any other stay.
     expect(screen.getByText(/Juan Pérez · \$/)).toBeInTheDocument();
     expect(screen.getByText(/María López · \$/)).toBeInTheDocument();
   });

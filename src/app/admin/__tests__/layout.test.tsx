@@ -44,16 +44,19 @@ describe("AdminLayout", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/dashboard content/i)).toBeInTheDocument();
 
-    // Sub-nav tabs: Panel · Propiedades · Reservas · Huéspedes · Destinatarios · Gastos.
+    // Sub-nav tabs: Panel · Calendario · Propiedades · Reservas · Huéspedes · Destinatarios · Gastos.
     const nav = screen.getByRole("navigation", {
       name: /secciones del panel/i,
     });
-    for (const tab of ["Panel", "Propiedades", "Reservas", "Huéspedes", "Destinatarios", "Gastos"]) {
+    for (const tab of ["Panel", "Calendario", "Propiedades", "Reservas", "Huéspedes", "Destinatarios", "Gastos"]) {
       expect(screen.getByText(tab)).toBeInTheDocument();
     }
     expect(
       screen.getByText("Panel").closest("a"),
     ).toHaveAttribute("href", "/admin");
+    expect(
+      screen.getByText("Calendario").closest("a"),
+    ).toHaveAttribute("href", "/admin/calendario");
     expect(
       screen.getByText("Reservas").closest("a"),
     ).toHaveAttribute("href", "/admin/reservas");

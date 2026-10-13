@@ -74,6 +74,7 @@ function sanitizeRedirect(raw: FormData): string {
 function revalidateBookingPaths(propertyId: string): void {
   revalidatePath(`/admin/propiedades/${propertyId}/agenda`);
   revalidatePath("/admin/reservas");
+  revalidatePath("/admin/calendario");
   revalidatePath("/admin");
   revalidatePath("/admin/destinatarios");
 }

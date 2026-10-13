@@ -180,6 +180,7 @@ describe("booking actions", () => {
       "/admin/propiedades/prop-1/agenda",
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/reservas");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/calendario");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/destinatarios");
   });

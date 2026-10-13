@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/admin", label: "Panel" },
+  { href: "/admin/calendario", label: "Calendario" },
   { href: "/admin/propiedades", label: "Propiedades" },
   { href: "/admin/reservas", label: "Reservas" },
   { href: "/admin/huespedes", label: "Huéspedes" },
@@ -15,7 +16,6 @@ const TABS = [
 /**
  * Admin sub-nav: `usePathname` is client-only state, so the active tab
  * (bold + underline per design tokens) lives in a client component.
- * PR1 moves "Gastos" into `TABS` (it points at the working gastos page);
  * PR2 inserts "Calendario" after "Panel".
  */
 export function AdminNavTabs() {

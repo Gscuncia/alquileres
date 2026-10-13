@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
-import { BookingCalendar, type CalendarBooking } from "@/components/admin/BookingCalendar";
+import {
+  CalendarGrid,
+  type CalendarEvent,
+} from "@/components/admin/CalendarGrid";
 import { BookingForm, type BookingFormValues } from "@/components/admin/BookingForm";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { createBooking, deleteBooking, updateBooking } from "@/app/admin/bookings/actions";
@@ -108,10 +111,10 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
   // Only a booking of this property may be edited here.
   const editing = editingBooking?.propertyId === property.id ? editingBooking : null;
 
-  const calendarBookings: CalendarBooking[] = bookings.map((booking) => ({
+  const calendarEvents: CalendarEvent[] = bookings.map((booking) => ({
     id: booking.id,
-    firstName: booking.guest.firstName,
-    lastName: booking.guest.lastName,
+    guest: { firstName: booking.guest.firstName, lastName: booking.guest.lastName },
+    property: { id: property.id, title: property.title },
     checkIn: booking.checkIn,
     checkOut: booking.checkOut,
   }));
@@ -140,11 +143,14 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
         </h2>
       </div>
 
-      <BookingCalendar
+      <CalendarGrid
         month={month}
-        bookings={calendarBookings}
-        navBasePath={basePath}
-        bookingHref={(bookingId) => `${basePath}${monthParam}&reserva=${bookingId}`}
+        events={calendarEvents}
+        properties={[{ id: property.id, title: property.title }]}
+        mode="single"
+        chipHref={(bookingId) => `${basePath}${monthParam}&reserva=${bookingId}`}
+        dayHref={(dayStr) => `${basePath}?fecha=${dayStr}`}
+        showMonthList
       />
 
       <div className="space-y-4">

@@ -116,6 +116,7 @@ export function BookingForm({
           <select
             id="propertyId"
             name="propertyId"
+            required
             defaultValue={values.propertyId}
             className={inputClasses}
           >

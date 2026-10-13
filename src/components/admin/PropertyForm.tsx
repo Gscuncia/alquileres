@@ -349,7 +349,7 @@ export function PropertyForm({
       />
       <p className="-mt-4 text-caption-sm text-muted">
         Para fotos de Google Drive usá el link directo de este formato (el
-        archivo debe estar compartido con "cualquiera con el enlace"):
+        archivo debe estar compartido con «cualquiera con el enlace»):
         https://drive.google.com/thumbnail?id=ID_DE_ARCHIVO&amp;sz=w1200
       </p>
 

@@ -45,7 +45,7 @@ export default async function AdminPropertiesPage({
           className="rounded-sm border border-hairline bg-surface-soft px-4 py-3 text-body-sm text-primary-error-text"
         >
           No se puede eliminar una propiedad publicada. Despublicala primero
-          desde el editor (destildá "Publicada") y volvé a intentar.
+          desde el editor (destildá «Publicada») y volvé a intentar.
         </div>
       )}
 

@@ -29,21 +29,37 @@ vi.mock("@/components/auth/signout-button", () => ({
   SignOutButton: () => <button type="button">Cerrar sesión</button>,
 }));
 
+function makeAdminSession() {
+  return {
+    user: {
+      id: "user-1",
+      email: "admin@alquileresanita.com.ar",
+      roleId: "role-1",
+      roleName: "Administrador",
+      allowedTabs: [
+        "panel",
+        "calendario",
+        "propiedades",
+        "reservas",
+        "huespedes",
+        "destinatarios",
+        "gastos",
+      ],
+      isDefaultAdmin: true,
+      mustChangePassword: false,
+    },
+  };
+}
+
 describe("AdminLayout", () => {
   it("renders navigation, user info, and logout for an authenticated admin", async () => {
-    mockAuth.mockResolvedValue({
-      user: {
-        id: "user-1",
-        email: "admin@alquileresanita.com.ar",
-        role: "ADMIN",
-      },
-    });
+    mockAuth.mockResolvedValue(makeAdminSession());
 
     render(await AdminLayout({ children: <div>Dashboard content</div> }));
 
     expect(screen.getByRole("heading", { name: /admin/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/admin@alquileresanita.com.ar · admin/i),
+      screen.getByText(/admin@alquileresanita.com.ar · Administrador/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /cerrar sesión/i }),
@@ -88,6 +104,27 @@ describe("AdminLayout", () => {
       screen.getByText("Gastos").closest("a"),
     ).toHaveAttribute("href", "/admin/gastos");
     expect(nav).toBeInTheDocument();
+  });
+
+  it("filters nav tabs for non-admin users based on allowedTabs", async () => {
+    mockAuth.mockResolvedValue({
+      user: {
+        id: "user-2",
+        email: "operative@alquileresanita.com.ar",
+        roleId: "role-2",
+        roleName: "Gestion diaria",
+        allowedTabs: ["calendario", "gastos"],
+        isDefaultAdmin: false,
+        mustChangePassword: false,
+      },
+    });
+
+    render(await AdminLayout({ children: <div>Limited content</div> }));
+
+    expect(screen.getByRole("link", { name: "Calendario" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Gastos" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Propiedades" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Reservas" })).not.toBeInTheDocument();
   });
 
   it("redirects unauthenticated users to sign-in", async () => {

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/require-admin";
+import { requirePermission } from "@/lib/require-auth";
 import { SignOutButton } from "@/components/auth/signout-button";
 import { AdminNavTabs } from "@/components/admin/AdminNavTabs";
 
@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await requireAdmin();
+  const session = await requirePermission();
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -29,7 +29,7 @@ export default async function AdminLayout({
             <div>
               <h1 className="text-title-md font-semibold text-ink">Admin</h1>
               <p className="text-caption-sm text-muted">
-                {session.user.email} · {session.user.role}
+                {session.user.email} · {session.user.roleName}
               </p>
             </div>
           </div>
@@ -72,7 +72,10 @@ export default async function AdminLayout({
       </header>
       <nav className="border-b border-hairline bg-canvas">
         <div className="mx-auto max-w-[1128px] px-4 py-3 md:px-6">
-          <AdminNavTabs />
+          <AdminNavTabs
+            allowedTabs={session.user.allowedTabs}
+            isDefaultAdmin={session.user.isDefaultAdmin}
+          />
         </div>
       </nav>
       <main className="mx-auto max-w-[1128px] px-4 py-8 md:px-6">{children}</main>

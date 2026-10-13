@@ -89,7 +89,7 @@ describe("expense actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue({
-      user: { id: "user-1", email: "admin@alquileresanita.com.ar", role: "ADMIN" },
+      user: { id: "user-1", email: "admin@alquileresanita.com.ar", role: "ADMIN", isDefaultAdmin: true },
     });
     mocks.expenseCreate.mockResolvedValue({});
     mocks.expenseUpdate.mockResolvedValue({});
@@ -111,7 +111,7 @@ describe("expense actions", () => {
   describe("authorization", () => {
     it("throws 'No autorizado' when the caller is not an admin", async () => {
       mocks.auth.mockResolvedValue({
-        user: { id: "user-2", role: "OPERATIVE" },
+        user: { id: "user-2", role: "OPERATIVE", isDefaultAdmin: false },
       });
 
       await expect(
@@ -130,7 +130,7 @@ describe("expense actions", () => {
 
     it("update and delete also run the admin gate first", async () => {
       mocks.auth.mockResolvedValue({
-        user: { id: "user-2", role: "OPERATIVE" },
+        user: { id: "user-2", role: "OPERATIVE", isDefaultAdmin: false },
       });
 
       await expect(

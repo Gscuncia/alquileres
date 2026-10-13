@@ -69,6 +69,7 @@ describe("auth authorize callback", () => {
       roleId: "role-1",
       roleName: "Administrador",
       allowedTabs: ["panel", "calendario", "propiedades"],
+      isDefaultAdmin: true,
       mustChangePassword: false,
     });
     expect(mockFindUnique).toHaveBeenCalledWith({

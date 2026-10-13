@@ -4,26 +4,40 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/admin", label: "Panel" },
-  { href: "/admin/calendario", label: "Calendario" },
-  { href: "/admin/propiedades", label: "Propiedades" },
-  { href: "/admin/reservas", label: "Reservas" },
-  { href: "/admin/huespedes", label: "Huéspedes" },
-  { href: "/admin/destinatarios", label: "Destinatarios" },
-  { href: "/admin/gastos", label: "Gastos" },
+  { href: "/admin", label: "Panel", tab: "panel" },
+  { href: "/admin/calendario", label: "Calendario", tab: "calendario" },
+  { href: "/admin/propiedades", label: "Propiedades", tab: "propiedades" },
+  { href: "/admin/reservas", label: "Reservas", tab: "reservas" },
+  { href: "/admin/huespedes", label: "Huéspedes", tab: "huespedes" },
+  { href: "/admin/destinatarios", label: "Destinatarios", tab: "destinatarios" },
+  { href: "/admin/gastos", label: "Gastos", tab: "gastos" },
 ] as const;
+
+interface AdminNavTabsProps {
+  allowedTabs?: string[];
+  isDefaultAdmin?: boolean;
+}
 
 /**
  * Admin sub-nav: `usePathname` is client-only state, so the active tab
  * (bold + underline per design tokens) lives in a client component.
- * PR2 inserts "Calendario" after "Panel".
+ *
+ * Tabs are filtered by the current user's allowed tabs. Default admins
+ * always see every tab.
  */
-export function AdminNavTabs() {
+export function AdminNavTabs({
+  allowedTabs = [],
+  isDefaultAdmin = false,
+}: AdminNavTabsProps) {
   const pathname = usePathname();
+
+  const visibleTabs = isDefaultAdmin
+    ? TABS
+    : TABS.filter((tab) => allowedTabs.includes(tab.tab));
 
   return (
     <nav aria-label="Secciones del panel" className="flex flex-wrap items-center gap-1 md:gap-2">
-      {TABS.map((tab) => {
+      {visibleTabs.map((tab) => {
         const active =
           tab.href === "/admin"
             ? pathname === "/admin"

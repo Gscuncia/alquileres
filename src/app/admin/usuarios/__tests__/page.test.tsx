@@ -26,6 +26,14 @@ vi.mock("@/components/admin/UserForm", () => ({
   UserForm: () => <div data-testid="user-form" />,
 }));
 
+vi.mock("@/components/admin/DeleteUserButton", () => ({
+  DeleteUserButton: ({ userId }: { userId: string }) => (
+    <button type="button" data-testid={`delete-user-${userId}`}>
+      Eliminar
+    </button>
+  ),
+}));
+
 import UsuariosPage from "@/app/admin/usuarios/page";
 
 const adminRole = { id: "role-1", name: "Administrador", allowedTabs: ["*"] };
@@ -102,5 +110,16 @@ describe("UsuariosPage", () => {
     expect(
       screen.getByText(/no tenés permisos para realizar esa acción/i),
     ).toBeInTheDocument();
+  });
+
+  it("renders a delete button for users other than the current one", async () => {
+    render(await UsuariosPage({ searchParams: {} }));
+
+    expect(
+      screen.getByTestId("delete-user-user-2"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("delete-user-user-1"),
+    ).not.toBeInTheDocument();
   });
 });

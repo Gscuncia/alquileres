@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/require-auth";
 import { SignOutButton } from "@/components/auth/signout-button";
 import { AdminNavTabs } from "@/components/admin/AdminNavTabs";
@@ -10,6 +11,10 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }>) {
   const session = await requirePermission();
+
+  if (session.user.mustChangePassword === true) {
+    redirect("/auth/change-password");
+  }
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -33,7 +38,15 @@ export default async function AdminLayout({
               </p>
             </div>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/cambiar-contrasena"
+              className="text-button-sm text-ink underline-offset-2 hover:underline"
+            >
+              Cambiar contraseña
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
         {/* Decorative seaside motif — matches public site header canvas treatment */}
         <div

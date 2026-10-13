@@ -64,6 +64,9 @@ describe("AdminLayout", () => {
     expect(
       screen.getByRole("button", { name: /cerrar sesión/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /cambiar contraseña/i }),
+    ).toHaveAttribute("href", "/admin/cambiar-contrasena");
     expect(screen.getByText(/dashboard content/i)).toBeInTheDocument();
 
     // Main-site logo and background treatment are applied to the admin header.
@@ -155,5 +158,25 @@ describe("AdminLayout", () => {
     ).rejects.toThrow("NEXT_REDIRECT /auth/access-denied");
 
     expect(mockRedirect).toHaveBeenCalledWith("/auth/access-denied");
+  });
+
+  it("redirects users that must change password to /auth/change-password", async () => {
+    mockAuth.mockResolvedValue({
+      user: {
+        id: "user-1",
+        email: "admin@alquileresanita.com.ar",
+        roleId: "role-1",
+        roleName: "Administrador",
+        allowedTabs: ["panel", "calendario"],
+        isDefaultAdmin: true,
+        mustChangePassword: true,
+      },
+    });
+
+    await expect(
+      AdminLayout({ children: <div>Dashboard content</div> }),
+    ).rejects.toThrow("NEXT_REDIRECT /auth/change-password");
+
+    expect(mockRedirect).toHaveBeenCalledWith("/auth/change-password");
   });
 });

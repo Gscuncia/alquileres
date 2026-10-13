@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/require-auth";
 import { createUser } from "@/app/admin/usuarios/actions";
 import { UserForm } from "@/components/admin/UserForm";
+import { DeleteUserButton } from "@/components/admin/DeleteUserButton";
 import {
   AdminPanel,
   AdminEmptyState,
@@ -26,7 +27,7 @@ function formatName(user: {
 }
 
 export default async function UsuariosPage({ searchParams }: UsuariosPageProps) {
-  await requirePermission("usuarios");
+  const session = await requirePermission("usuarios");
 
   const [users, roles] = await Promise.all([
     prisma.user.findMany({
@@ -70,6 +71,7 @@ export default async function UsuariosPage({ searchParams }: UsuariosPageProps) 
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Email</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Nombre</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Rol</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink" />
               </tr>
             </thead>
             <tbody>
@@ -78,6 +80,11 @@ export default async function UsuariosPage({ searchParams }: UsuariosPageProps) 
                   <td className={`${tableCellClasses} text-ink`}>{user.email}</td>
                   <td className={tableCellClasses}>{formatName(user)}</td>
                   <td className={tableCellClasses}>{user.role.name}</td>
+                  <td className={tableCellClasses}>
+                    {session.user.id !== user.id && (
+                      <DeleteUserButton userId={user.id} />
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

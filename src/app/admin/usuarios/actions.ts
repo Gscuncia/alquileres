@@ -49,6 +49,31 @@ function buildCreateUserInput(formData: FormData): Record<string, unknown> {
   };
 }
 
+export async function deleteUser(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireAdminForAction();
+
+  const userId =
+    typeof formData.get("userId") === "string"
+      ? (formData.get("userId") as string).trim()
+      : "";
+
+  if (!userId) {
+    return { ok: false, message: "Usuario no encontrado." };
+  }
+
+  if (session!.user.id === userId) {
+    return { ok: false, message: "No podés eliminar tu propio usuario." };
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+
+  revalidatePath("/admin/usuarios");
+  return { ok: true, message: ACTION_SUCCESS_MESSAGE };
+}
+
 export async function createUser(
   _prevState: ActionState,
   formData: FormData,

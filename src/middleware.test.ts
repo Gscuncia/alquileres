@@ -12,6 +12,7 @@ type UserClaims = {
   roleId: string;
   allowedTabs: string[];
   isDefaultAdmin: boolean;
+  mustChangePassword?: boolean;
 };
 
 type MiddlewareRequest = NextRequest & { auth: { user: UserClaims } | null };
@@ -36,6 +37,7 @@ function makeUser(overrides: Partial<UserClaims> = {}): UserClaims {
     roleId: "role-2",
     allowedTabs: ["calendario", "gastos"],
     isDefaultAdmin: false,
+    mustChangePassword: false,
     ...overrides,
   };
 }
@@ -154,5 +156,34 @@ describe("middleware", () => {
 
     expect(middleware(usersReq)).toBeUndefined();
     expect(middleware(rolesReq)).toBeUndefined();
+  });
+
+  it("redirects users that must change password to /auth/change-password", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin", makeUser({ mustChangePassword: true }));
+
+    const res = middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/change-password");
+  });
+
+  it("does not redirect users that must change password when they are on /auth/change-password", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/auth/change-password", makeUser({ mustChangePassword: true }));
+
+    const res = middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it("does not redirect users that must change password when they are on other auth paths", async () => {
+    const middleware = await loadMiddleware();
+
+    for (const pathname of ["/auth/signin", "/auth/recover", "/auth/reset"]) {
+      const req = buildRequest(pathname, makeUser({ mustChangePassword: true }));
+      expect(middleware(req)).toBeUndefined();
+    }
   });
 });

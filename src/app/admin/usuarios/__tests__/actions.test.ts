@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   revalidatePath: vi.fn(),
   userCreate: vi.fn(),
+  userDelete: vi.fn(),
   roleFindUnique: vi.fn(),
   bcryptHash: vi.fn(),
   sendWelcomeEmail: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: {
       create: mocks.userCreate,
+      delete: mocks.userDelete,
     },
     role: {
       findUnique: mocks.roleFindUnique,
@@ -38,7 +40,7 @@ vi.mock("@/lib/mail", () => ({
   sendWelcomeEmail: (...args: [string, string]) => mocks.sendWelcomeEmail(...args),
 }));
 
-import { createUser } from "@/app/admin/usuarios/actions";
+import { createUser, deleteUser } from "@/app/admin/usuarios/actions";
 import type { ActionState } from "@/lib/admin-action-types";
 
 const initialState: ActionState = { ok: false };
@@ -79,10 +81,46 @@ describe("user actions", () => {
       expect(mocks.userCreate).not.toHaveBeenCalled();
     });
 
+    it("throws 'No autorizado' when a non-admin tries to delete a user", async () => {
+      mocks.auth.mockResolvedValue({
+        user: { id: "user-2", email: "operative@alquileresanita.com.ar", isDefaultAdmin: false },
+      });
+      const formData = new FormData();
+      formData.append("userId", "user-3");
+
+      await expect(deleteUser(initialState, formData)).rejects.toThrow("No autorizado");
+      expect(mocks.userDelete).not.toHaveBeenCalled();
+    });
+
     it("throws when there is no session", async () => {
       mocks.auth.mockResolvedValue(null);
 
       await expect(createUser(initialState, buildFormData())).rejects.toThrow("No autorizado");
+    });
+  });
+
+  describe("deleteUser", () => {
+    it("prevents a user from deleting their own account", async () => {
+      const formData = new FormData();
+      formData.append("userId", "user-1");
+
+      const result = await deleteUser(initialState, formData);
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toMatch(/propio usuario/i);
+      expect(mocks.userDelete).not.toHaveBeenCalled();
+    });
+
+    it("allows an admin to delete another user", async () => {
+      mocks.userDelete.mockResolvedValue({});
+      const formData = new FormData();
+      formData.append("userId", "user-2");
+
+      const result = await deleteUser(initialState, formData);
+
+      expect(result.ok).toBe(true);
+      expect(mocks.userDelete).toHaveBeenCalledWith({ where: { id: "user-2" } });
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/usuarios");
     });
   });
 

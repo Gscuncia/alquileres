@@ -5,12 +5,20 @@ import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
 import { Button } from "@/components/design-system";
 
+export interface ExpenseTypeOption {
+  id: string;
+  name: string;
+  requiresProperty: boolean;
+}
+
 interface ExpenseFormProps {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   properties: { id: string; title: string }[];
+  expenseTypes: ExpenseTypeOption[];
   initialValues?: {
     id: string;
-    type: "MANTENIMIENTO" | "CONSORCIO";
+    typeId: string;
+    /** Empty for general expenses (never persisted with a property). */
     propertyId?: string | null;
     category: string;
     description?: string | null;
@@ -34,13 +42,13 @@ function FieldError({ message }: { message?: string }) {
 export function ExpenseForm({
   action,
   properties,
+  expenseTypes,
   initialValues,
   submitLabel = "Guardar",
 }: ExpenseFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
-  const [type, setType] = useState<"MANTENIMIENTO" | "CONSORCIO">(
-    initialValues?.type ?? "MANTENIMIENTO",
-  );
+  const [typeId, setTypeId] = useState(initialValues?.typeId ?? "");
+  const selectedType = expenseTypes.find((type) => type.id === typeId);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -65,22 +73,26 @@ export function ExpenseForm({
       )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label htmlFor="type" className={labelClasses}>
+          <label htmlFor="typeId" className={labelClasses}>
             Tipo
           </label>
           <select
-            id="type"
-            name="type"
-            value={type}
-            onChange={(event) => setType(event.target.value as typeof type)}
+            id="typeId"
+            name="typeId"
+            value={typeId}
+            onChange={(event) => setTypeId(event.target.value)}
             className={inputClasses}
           >
-            <option value="MANTENIMIENTO">Mantenimiento</option>
-            <option value="CONSORCIO">Consorcio (general)</option>
+            <option value="">Seleccionar tipo…</option>
+            {expenseTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
           </select>
-          <FieldError message={state.fieldErrors?.type} />
+          <FieldError message={state.fieldErrors?.typeId} />
         </div>
-        {type === "MANTENIMIENTO" && (
+        {selectedType?.requiresProperty ? (
           <div>
             <label htmlFor="propertyId" className={labelClasses}>
               Propiedad
@@ -100,6 +112,9 @@ export function ExpenseForm({
             </select>
             <FieldError message={state.fieldErrors?.propertyId} />
           </div>
+        ) : (
+          // General types submit an empty propertyId; the action clears it.
+          <input type="hidden" name="propertyId" value="" />
         )}
         <div>
           <label htmlFor="category" className={labelClasses}>

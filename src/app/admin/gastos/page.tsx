@@ -8,20 +8,24 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
+  createExpenseType,
+  updateExpenseType,
+  deleteExpenseType,
 } from "@/app/admin/expenses/actions";
 import { ExpenseForm } from "@/components/admin/ExpenseForm";
+import { ExpenseTypeForm } from "@/components/admin/ExpenseTypeForm";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const VALID_TYPE = new Set(["MANTENIMIENTO", "CONSORCIO"]);
 
 interface GastosPageProps {
   searchParams?: {
     gasto?: string;
-    from?: string;
-    to?: string;
     tipo?: string;
     propiedad?: string;
+    from?: string;
+    to?: string;
+    error?: string;
   };
 }
 
@@ -38,29 +42,37 @@ const dateDisplayOptions: Intl.DateTimeFormatOptions = {
   year: "numeric",
 };
 
-const typeLabels = {
-  MANTENIMIENTO: "Mantenimiento",
-  CONSORCIO: "Consorcio",
-} as const;
-
 export default async function GastosPage({ searchParams }: GastosPageProps) {
   await requireAdmin();
 
   const gastoId = searchParams?.gasto?.trim() ?? "";
+  // `tipo` doubles as the expense filter (type id) and the types-manager edit
+  // selector; it is validated against the fetched types below.
+  const tipoRaw = searchParams?.tipo?.trim() ?? "";
+  const propiedad = searchParams?.propiedad?.trim() ?? "";
   const from = VALID_DATE.test(searchParams?.from ?? "")
     ? (searchParams?.from as string)
     : "";
   const to = VALID_DATE.test(searchParams?.to ?? "")
     ? (searchParams?.to as string)
     : "";
-  const tipo = VALID_TYPE.has(searchParams?.tipo ?? "")
-    ? (searchParams?.tipo as "MANTENIMIENTO" | "CONSORCIO")
-    : "";
-  const propiedad = searchParams?.propiedad?.trim() ?? "";
+
+  const [expenseTypes, properties, editingExpense] = await Promise.all([
+    prisma.expenseType.findMany({ orderBy: { name: "asc" } }),
+    getAllPropertiesForAdmin(),
+    gastoId
+      ? prisma.expense.findUnique({ where: { id: gastoId } })
+      : Promise.resolve(null),
+  ]);
+
+  // `tipo` must match one of the fetched types; unknown ids are ignored and
+  // a match doubles as the types-manager edit selector.
+  const editingTypeRow = expenseTypes.find((type) => type.id === tipoRaw) ?? null;
+  const tipo = editingTypeRow?.id ?? "";
 
   const where: {
     propertyId?: string;
-    type?: "MANTENIMIENTO" | "CONSORCIO";
+    expenseTypeId?: string;
     date?: { gte?: Date; lt?: Date };
   } = {};
 
@@ -68,7 +80,7 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
     where.propertyId = propiedad;
   }
   if (tipo) {
-    where.type = tipo;
+    where.expenseTypeId = tipo;
   }
   // Period filter [from, to): same half-open convention as the dashboard.
   if (from || to) {
@@ -80,24 +92,18 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
 
   const hasFilters = Boolean(from || to || tipo || propiedad);
 
-  const [expenses, properties, editingExpense] = await Promise.all([
-    prisma.expense.findMany({
-      where: hasFilters ? where : undefined,
-      include: { property: true },
-      orderBy: { date: "desc" },
-    }),
-    getAllPropertiesForAdmin(),
-    gastoId
-      ? prisma.expense.findUnique({ where: { id: gastoId } })
-      : Promise.resolve(null),
-  ]);
+  const expenses = await prisma.expense.findMany({
+    where: hasFilters ? where : undefined,
+    include: { property: true, expenseType: true },
+    orderBy: { date: "desc" },
+  });
 
   const editing = editingExpense ?? null;
 
   const editingInitialValues = editing
     ? {
         id: editing.id,
-        type: editing.type,
+        typeId: editing.expenseTypeId,
         propertyId: editing.propertyId,
         category: editing.category,
         description: editing.description,
@@ -106,9 +112,88 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
       }
     : undefined;
 
+  const expenseTypeOptions = expenseTypes.map(({ id, name, requiresProperty }) => ({
+    id,
+    name,
+    requiresProperty,
+  }));
+
+  const editingTypeValues = editingTypeRow
+    ? {
+        id: editingTypeRow.id,
+        name: editingTypeRow.name,
+        requiresProperty: editingTypeRow.requiresProperty,
+      }
+    : undefined;
+
   return (
     <div className="space-y-6">
       <h2 className="text-display-sm font-semibold text-ink">Gastos</h2>
+
+      {searchParams?.error === "tipo-gastos" && (
+        <div
+          role="alert"
+          className="rounded-sm border border-hairline bg-surface-soft px-4 py-3 text-body-sm text-primary-error-text"
+        >
+          No se puede eliminar: el tipo de gasto tiene gastos asociados.
+        </div>
+      )}
+
+      <section className="space-y-4 rounded-md border border-hairline bg-canvas p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-title-md font-semibold text-ink">
+            Tipos de gasto
+          </h3>
+          {editingTypeRow && (
+            <Link
+              href="/admin/gastos"
+              className="text-button-sm text-muted underline-offset-2 hover:underline"
+            >
+              Cancelar edición
+            </Link>
+          )}
+        </div>
+        <ExpenseTypeForm
+          action={editingTypeRow ? updateExpenseType : createExpenseType}
+          initialValues={editingTypeValues}
+          submitLabel={editingTypeRow ? "Guardar cambios" : "Crear tipo"}
+        />
+        {expenseTypes.length === 0 ? (
+          <p className="text-caption-sm text-muted">
+            Todavía no hay tipos de gasto cargados.
+          </p>
+        ) : (
+          <ul className="divide-y divide-hairline rounded-md border border-hairline">
+            {expenseTypes.map((type) => (
+              <li
+                key={type.id}
+                className="flex items-center justify-between gap-4 px-4 py-3"
+              >
+                <span className="flex items-center gap-3 text-body-sm text-body">
+                  <span className="text-ink">{type.name}</span>
+                  {type.requiresProperty && (
+                    <span className="rounded-sm bg-surface-soft px-2 py-0.5 text-caption-sm text-muted">
+                      Requiere propiedad
+                    </span>
+                  )}
+                </span>
+                <span className="flex items-center gap-3">
+                  <Link
+                    href={`/admin/gastos?tipo=${type.id}`}
+                    className="text-button-sm text-ink underline-offset-2 hover:underline"
+                  >
+                    Editar
+                  </Link>
+                  <form action={deleteExpenseType}>
+                    <input type="hidden" name="id" value={type.id} />
+                    <ConfirmButton />
+                  </form>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -127,6 +212,7 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
         <ExpenseForm
           action={editing ? updateExpense : createExpense}
           properties={properties}
+          expenseTypes={expenseTypeOptions}
           initialValues={editingInitialValues}
           submitLabel={editing ? "Guardar cambios" : "Crear gasto"}
         />
@@ -172,8 +258,11 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
             className={inputClasses}
           >
             <option value="">Todos</option>
-            <option value="MANTENIMIENTO">Mantenimiento</option>
-            <option value="CONSORCIO">Consorcio</option>
+            {expenseTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -233,7 +322,7 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
             {expenses.map((expense) => (
               <tr key={expense.id}>
                 <td className={`${tableCellClasses} text-ink`}>
-                  {typeLabels[expense.type]}
+                  {expense.expenseType.name}
                 </td>
                 <td className={tableCellClasses}>
                   {expense.property?.title ?? "General"}

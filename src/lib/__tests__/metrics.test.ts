@@ -61,7 +61,7 @@ describe("boundary conversion", () => {
     const snapshot = toExpenseSnapshot({
       id: "e-1",
       propertyId: "p-1",
-      type: "MANTENIMIENTO",
+      expenseTypeId: "t-mant",
       category: "Plomería",
       description: null,
       amount: decimalLike(150),
@@ -69,7 +69,7 @@ describe("boundary conversion", () => {
     } as never);
 
     expect(snapshot.amount).toBe(150);
-    expect(snapshot.type).toBe("MANTENIMIENTO");
+    expect(snapshot.expenseTypeId).toBe("t-mant");
   });
 });
 

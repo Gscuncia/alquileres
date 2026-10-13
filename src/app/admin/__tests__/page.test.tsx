@@ -64,7 +64,7 @@ const periodExpenses = [
   {
     id: "e-1",
     propertyId: "p-1",
-    type: "MANTENIMIENTO" as const,
+    expenseTypeId: "t-mant",
     category: "Plomería",
     description: null,
     amount: 120,
@@ -73,7 +73,7 @@ const periodExpenses = [
   {
     id: "e-2",
     propertyId: null,
-    type: "CONSORCIO" as const,
+    expenseTypeId: "t-cons",
     category: "Expensas",
     description: null,
     amount: 80,

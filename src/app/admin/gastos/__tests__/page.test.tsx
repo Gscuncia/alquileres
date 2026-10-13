@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   requireAdmin: vi.fn(),
   expenseFindMany: vi.fn(),
   expenseFindUnique: vi.fn(),
+  expenseTypeFindMany: vi.fn(),
   getProperties: vi.fn(),
 }));
 
@@ -18,6 +19,9 @@ vi.mock("@/lib/prisma", () => ({
       findMany: mocks.expenseFindMany,
       findUnique: mocks.expenseFindUnique,
     },
+    expenseType: {
+      findMany: mocks.expenseTypeFindMany,
+    },
   },
 }));
 
@@ -26,10 +30,14 @@ vi.mock("@/lib/properties-db", () => ({
 }));
 
 // Plain react-dom 18.3.1 lacks useFormState (Next 14's vendored copy has it);
-// the form component itself is covered by its own concerns — the page test
-// stubs it, mirroring the property-form test stub from PR2.
+// the form components themselves are covered by their own concerns — the
+// page test stubs them, mirroring the property-form test stub.
 vi.mock("@/components/admin/ExpenseForm", () => ({
   ExpenseForm: () => <div data-testid="expense-form" />,
+}));
+
+vi.mock("@/components/admin/ExpenseTypeForm", () => ({
+  ExpenseTypeForm: () => <div data-testid="expense-type-form" />,
 }));
 
 import GastosPage from "@/app/admin/gastos/page";
@@ -40,12 +48,16 @@ const properties = [
   { id: "p-2", title: "Casita", slug: "casita", shortDescription: "", location: "", images: [], description: "", amenities: [], capacity: 4, bedrooms: 2, bathrooms: 1, published: true, sortOrder: 2 },
 ];
 
+const typeMant = { id: "t-mant", name: "Mantenimiento", requiresProperty: true };
+const typeCons = { id: "t-cons", name: "Consorcio", requiresProperty: false };
+
 const expenses = [
   {
     id: "e-1",
     propertyId: "p-1",
     property: { id: "p-1", title: "Depto 1" },
-    type: "MANTENIMIENTO" as const,
+    expenseTypeId: "t-mant",
+    expenseType: typeMant,
     category: "Plomería",
     description: "Cambio de grifería",
     amount: 150,
@@ -55,7 +67,8 @@ const expenses = [
     id: "e-2",
     propertyId: null,
     property: null,
-    type: "CONSORCIO" as const,
+    expenseTypeId: "t-cons",
+    expenseType: typeCons,
     category: "Expensas",
     description: null,
     amount: 200,
@@ -70,16 +83,32 @@ describe("GastosPage", () => {
       user: { id: "user-1", email: "admin@alquileresanita.com.ar", role: "ADMIN" },
     });
     mocks.getProperties.mockResolvedValue(properties);
+    mocks.expenseTypeFindMany.mockResolvedValue([typeMant, typeCons]);
     mocks.expenseFindMany.mockResolvedValue(expenses);
     mocks.expenseFindUnique.mockResolvedValue(null);
   });
 
-  it("lists expenses with type, property (general for consorcio), category, amount, date, and description", async () => {
+  it("renders the types manager inline section with its form and type rows", async () => {
+    render(await GastosPage({ searchParams: {} }));
+
+    expect(screen.getByText("Tipos de gasto")).toBeInTheDocument();
+    expect(screen.getByTestId("expense-type-form")).toBeInTheDocument();
+    // Each row: name + "Requiere propiedad" badge for requiresProperty types.
+    expect(screen.getAllByText("Mantenimiento").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Consorcio").length).toBeGreaterThan(0);
+    expect(screen.getByText("Requiere propiedad")).toBeInTheDocument();
+  });
+
+  it("lists expenses with type name replacing the enum label and property or General", async () => {
     render(await GastosPage({ searchParams: {} }));
 
     // No filters → no where clause, all rows, newest first.
     expect(mocks.expenseFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: undefined, orderBy: { date: "desc" } }),
+      expect.objectContaining({
+        where: undefined,
+        include: { property: true, expenseType: true },
+        orderBy: { date: "desc" },
+      }),
     );
 
     const mantRow = screen.getByText("Plomería").closest("tr");
@@ -89,45 +118,39 @@ describe("GastosPage", () => {
     expect(mantRow).toHaveTextContent("Cambio de grifería");
 
     const consRow = screen.getByText("Expensas").closest("tr");
-    expect(consRow).toHaveTextContent("Consorcio");
     expect(consRow).toHaveTextContent("General");
+  });
 
-    // Edit link follows the ?gasto=<id> edit pattern (agenda: ?reserva=).
+  it("type rows offer Editar via ?tipo=<id> and delete via ConfirmButton form", async () => {
+    render(await GastosPage({ searchParams: {} }));
+
     expect(
-      screen.getAllByRole("link", { name: /editar/i })[0],
-    ).toHaveAttribute("href", "/admin/gastos?gasto=e-1");
+      screen.getAllByRole("link", { name: "Editar" }).find(
+        (link) => link.getAttribute("href") === `/admin/gastos?tipo=${typeMant.id}`,
+      ),
+    ).toBeDefined();
   });
 
-  it("filters by type and property through the where clause", async () => {
-    render(await GastosPage({ searchParams: { tipo: "CONSORCIO", propiedad: "p-1" } }));
-
-    expect(mocks.expenseFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { type: "CONSORCIO", propertyId: "p-1" },
-      }),
-    );
-  });
-
-  it("filters by period [from, to) with UTC-3 instants", async () => {
+  it("combine filters by type id + property + period combinable in the where clause", async () => {
     render(
-      await GastosPage({ searchParams: { from: "2026-10-01", to: "2026-10-15" } }),
+      await GastosPage({
+        searchParams: { tipo: typeCons.id, propiedad: "p-1", from: "2026-10-01", to: "2026-10-31" },
+      }),
     );
 
     const call = mocks.expenseFindMany.mock.calls[0][0];
-    expect(call.where.date.gte.toISOString()).toBe(
-      toUtc("2026-10-01", "00:00").toISOString(),
-    );
-    expect(call.where.date.lt.toISOString()).toBe(
-      toUtc("2026-10-15", "00:00").toISOString(),
-    );
+    expect(call.where).toEqual({
+      expenseTypeId: typeCons.id,
+      propertyId: "p-1",
+      date: {
+        gte: toUtc("2026-10-01", "00:00"),
+        lt: toUtc("2026-10-31", "00:00"),
+      },
+    });
   });
 
-  it("ignores invalid filters instead of erroring", async () => {
-    render(
-      await GastosPage({
-        searchParams: { from: "no-es-fecha", tipo: "OTRO", propiedad: "   " },
-      }),
-    );
+  it("ignores an unknown ?tipo id (not among the fetched types) instead of erroring", async () => {
+    render(await GastosPage({ searchParams: { tipo: "t-inexistente" } }));
 
     expect(mocks.expenseFindMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: undefined }),
@@ -137,10 +160,10 @@ describe("GastosPage", () => {
   it("shows the filters-empty and no-data empty states", async () => {
     mocks.expenseFindMany.mockResolvedValue([]);
 
-    render(await GastosPage({ searchParams: { tipo: "CONSORCIO" } }));
+    render(await GastosPage({ searchParams: { tipo: typeCons.id } }));
     expect(screen.getByText(/no hay gastos que coincidan/i)).toBeInTheDocument();
-
     cleanup();
+
     render(await GastosPage({ searchParams: {} }));
     expect(
       screen.getByText(/todavía no hay gastos cargados/i),
@@ -167,5 +190,22 @@ describe("GastosPage", () => {
     render(await GastosPage({ searchParams: { gasto: "desconocido" } }));
 
     expect(screen.getByText(/^Nuevo gasto$/)).toBeInTheDocument();
+  });
+
+  it("selects a type for editing via ?tipo=<id>: type form in edit mode + Cancelar edición", async () => {
+    render(await GastosPage({ searchParams: { tipo: typeMant.id } }));
+
+    expect(screen.getByText("Cancelar edición")).toBeInTheDocument();
+    expect(screen.getByText("Tipos de gasto")).toBeInTheDocument();
+  });
+
+  it("shows the guard banner when a type delete was blocked (?error=tipo-gastos)", async () => {
+    render(await GastosPage({ searchParams: { error: "tipo-gastos" } }));
+
+    expect(
+      screen.getByText(
+        /No se puede eliminar: el tipo de gasto tiene gastos asociados./i,
+      ),
+    ).toBeInTheDocument();
   });
 });

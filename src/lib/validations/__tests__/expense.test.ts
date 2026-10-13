@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { expenseSchema } from "@/lib/validations/expense";
+import { expenseSchema, expenseTypeSchema } from "@/lib/validations/expense";
 import { toUtc } from "@/lib/datetime";
 
 const validExpense = {
-  type: "MANTENIMIENTO",
+  typeId: "t-1",
   propertyId: "p-1",
   category: "Plomería",
   description: "Cambio de grifería en el baño",
@@ -12,12 +12,12 @@ const validExpense = {
 };
 
 describe("expenseSchema", () => {
-  it("parses a valid maintenance expense and builds the UTC-3 instant", () => {
+  it("parses a valid expense carrying its type id and builds the UTC-3 instant", () => {
     const parsed = expenseSchema.safeParse(validExpense);
 
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.type).toBe("MANTENIMIENTO");
+      expect(parsed.data.typeId).toBe("t-1");
       expect(parsed.data.propertyId).toBe("p-1");
       // Free text category persists verbatim.
       expect(parsed.data.category).toBe("Plomería");
@@ -27,29 +27,29 @@ describe("expenseSchema", () => {
     }
   });
 
-  it("rejects MANTENIMIENTO without a property, in Spanish, naming the field", () => {
+  it("rejects an empty typeId, in Spanish, naming the field", () => {
+    const parsed = expenseSchema.safeParse({
+      ...validExpense,
+      typeId: "  ",
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const issue = parsed.error.issues.find((i) => i.path[0] === "typeId");
+      expect(issue?.message).toBe("El tipo de gasto es obligatorio.");
+    }
+  });
+
+  it("accepts a missing propertyId (the action decides via the type flag)", () => {
     const parsed = expenseSchema.safeParse({
       ...validExpense,
       propertyId: "",
     });
 
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      const issue = parsed.error.issues.find((i) => i.path[0] === "propertyId");
-      expect(issue?.message).toMatch(/mantenimiento.*propiedad|propiedad/i);
-    }
-  });
-
-  it("clears the property for CONSORCIO: a consorcio expense is never persisted with a property", () => {
-    const parsed = expenseSchema.safeParse({
-      ...validExpense,
-      type: "CONSORCIO",
-      propertyId: "p-1",
-    });
-
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.type).toBe("CONSORCIO");
+      // No cross-field enum logic left in the schema: propertyId stays as
+      // submitted (undefined) for the action to keep or clear.
       expect(parsed.data.propertyId).toBeUndefined();
     }
   });
@@ -80,17 +80,13 @@ describe("expenseSchema", () => {
     }
   });
 
-  it("rejects an unknown type", () => {
+  it("accepts any string typeId (type existence is checked at the action)", () => {
     const parsed = expenseSchema.safeParse({
       ...validExpense,
-      type: "OTRO",
+      typeId: "unknown-type-id",
     });
 
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      const issue = parsed.error.issues.find((i) => i.path[0] === "type");
-      expect(issue?.message).toMatch(/tipo/i);
-    }
+    expect(parsed.success).toBe(true);
   });
 
   it("rejects an invalid date, in Spanish, naming the field", () => {
@@ -112,6 +108,51 @@ describe("expenseSchema", () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.description).toBeUndefined();
+    }
+  });
+});
+
+describe("expenseTypeSchema", () => {
+  it("parses a name with the requiresProperty flag", () => {
+    const parsed = expenseTypeSchema.safeParse({
+      name: "Mantenimiento",
+      requiresProperty: true,
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data).toEqual({
+        name: "Mantenimiento",
+        requiresProperty: true,
+      });
+    }
+  });
+
+  it("rejects an empty name, in Spanish, naming the field", () => {
+    const parsed = expenseTypeSchema.safeParse({
+      name: "   ",
+      requiresProperty: false,
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const issue = parsed.error.issues.find((i) => i.path[0] === "name");
+      expect(issue?.message).toMatch(/nombre/i);
+    }
+  });
+
+  it("rejects a non-boolean requiresProperty", () => {
+    const parsed = expenseTypeSchema.safeParse({
+      name: "Consorcio",
+      requiresProperty: "si",
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const issue = parsed.error.issues.find(
+        (i) => i.path[0] === "requiresProperty",
+      );
+      expect(issue?.message).toMatch(/propiedad/i);
     }
   });
 });

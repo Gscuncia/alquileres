@@ -46,7 +46,7 @@ export interface BookingSnapshot {
 export interface ExpenseSnapshot {
   id: string;
   propertyId: string | null;
-  type: "MANTENIMIENTO" | "CONSORCIO";
+  expenseTypeId: string;
   category: string;
   description: string | null;
   amount: number;
@@ -81,7 +81,7 @@ export function toExpenseSnapshot(expense: ExpenseRowLike): ExpenseSnapshot {
   return {
     id: expense.id,
     propertyId: expense.propertyId,
-    type: expense.type,
+    expenseTypeId: expense.expenseTypeId,
     category: expense.category,
     description: expense.description,
     amount: toNumber(expense.amount),

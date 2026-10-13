@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   userCreate: vi.fn(),
   roleFindUnique: vi.fn(),
   bcryptHash: vi.fn(),
+  sendWelcomeEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -31,6 +32,10 @@ vi.mock("bcryptjs", () => ({
   default: {
     hash: (password: string, rounds: number) => mocks.bcryptHash(password, rounds),
   },
+}));
+
+vi.mock("@/lib/mail", () => ({
+  sendWelcomeEmail: (...args: [string, string]) => mocks.sendWelcomeEmail(...args),
 }));
 
 import { createUser } from "@/app/admin/usuarios/actions";
@@ -61,6 +66,7 @@ describe("user actions", () => {
     mocks.roleFindUnique.mockResolvedValue({ id: "role-2" });
     mocks.bcryptHash.mockResolvedValue("hashed-password");
     mocks.userCreate.mockResolvedValue({});
+    mocks.sendWelcomeEmail.mockResolvedValue(undefined);
   });
 
   describe("authorization", () => {
@@ -140,6 +146,31 @@ describe("user actions", () => {
       mocks.userCreate.mockRejectedValue(new Error("connection refused"));
 
       await expect(createUser(initialState, buildFormData())).rejects.toThrow("connection refused");
+    });
+
+    it("sends a welcome email after creating the user", async () => {
+      const result = await createUser(initialState, buildFormData());
+
+      expect(result.ok).toBe(true);
+      expect(mocks.sendWelcomeEmail).toHaveBeenCalledWith(
+        "new@alquileresanita.com.ar",
+        "anita1234",
+      );
+    });
+
+    it("still succeeds when the welcome email fails", async () => {
+      mocks.sendWelcomeEmail.mockRejectedValue(new Error("SMTP unavailable"));
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await createUser(initialState, buildFormData());
+
+      expect(result.ok).toBe(true);
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[createUser] Failed to send welcome email:",
+        expect.any(Error),
+      );
+
+      errorSpy.mockRestore();
     });
   });
 });

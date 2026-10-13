@@ -5,6 +5,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdminForAction } from "@/lib/require-auth";
+import { sendWelcomeEmail } from "@/lib/mail";
 import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
@@ -91,6 +92,15 @@ export async function createUser(
       };
     }
     throw error;
+  }
+
+  try {
+    await sendWelcomeEmail(parsed.data.email, DEFAULT_WELCOME_PASSWORD);
+  } catch (emailError) {
+    // Do not fail user creation if the email cannot be delivered; the admin
+    // already knows the default password and can share it manually.
+    // eslint-disable-next-line no-console
+    console.error("[createUser] Failed to send welcome email:", emailError);
   }
 
   revalidatePath("/admin/usuarios");

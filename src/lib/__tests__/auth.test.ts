@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { authorize } from "@/lib/auth";
+import authConfig from "@/lib/auth.config";
 
 const mockFindUnique = vi.hoisted(() => vi.fn());
 
@@ -107,5 +108,27 @@ describe("auth authorize callback", () => {
     });
 
     expect(result).toBeNull();
+  });
+});
+
+describe("auth config signIn callback", () => {
+  it("returns true when the user does not need to change password", async () => {
+    const result = await authConfig.callbacks?.signIn?.({
+      user: { id: "user-1", mustChangePassword: false },
+      account: null,
+      profile: undefined,
+    });
+
+    expect(result).toBe(true);
+  });
+
+  it("redirects users that must change password to /auth/change-password", async () => {
+    const result = await authConfig.callbacks?.signIn?.({
+      user: { id: "user-1", mustChangePassword: true },
+      account: null,
+      profile: undefined,
+    });
+
+    expect(result).toBe("/auth/change-password");
   });
 });

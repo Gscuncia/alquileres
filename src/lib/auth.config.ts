@@ -9,6 +9,12 @@ export default {
     strategy: "jwt",
   },
   callbacks: {
+    signIn: async ({ user }) => {
+      if (user?.mustChangePassword === true) {
+        return "/auth/change-password";
+      }
+      return true;
+    },
     jwt: async ({ token, user }) => {
       if (user) {
         token.sub = user.id;

@@ -1,18 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   seed,
+  seedRoles,
   seedAdmin,
   seedProperties,
   seedRecipients,
   seedExpenseTypes,
 } from "../seed";
 
+const mockRoleUpsert = vi.fn();
+const mockRoleFindUnique = vi.fn();
 const mockUserUpsert = vi.fn();
 const mockPropertyUpsert = vi.fn();
 const mockRecipientUpsert = vi.fn();
 const mockExpenseTypeUpsert = vi.fn();
 
 const mockPrismaClient = {
+  role: { upsert: mockRoleUpsert, findUnique: mockRoleFindUnique },
   user: { upsert: mockUserUpsert },
   property: { upsert: mockPropertyUpsert },
   transferRecipient: { upsert: mockRecipientUpsert },
@@ -30,9 +34,25 @@ type Prisma = Parameters<typeof seed>[0];
 describe("prisma seed", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("DEFAULT_ADMIN_EMAIL", "admin@alquileresanita.com.ar");
+    vi.stubEnv("DEFAULT_ADMIN_PASSWORD", "admin123");
+
+    mockRoleUpsert.mockImplementation(({ where, create }) => ({
+      id: create.name === "Administrador" ? "role-admin" : "role-operative",
+      name: where.name,
+      allowedTabs: create.allowedTabs,
+      isDefaultAdmin: create.name === "Administrador",
+      ...create,
+    }));
+    mockRoleFindUnique.mockImplementation(({ where }) => {
+      if (where.name === "Administrador") {
+        return { id: "role-admin", name: "Administrador" };
+      }
+      return null;
+    });
     mockUserUpsert.mockImplementation(({ where, create }) => ({
       email: where.email,
-      role: "ADMIN",
+      roleId: create?.roleId ?? "role-admin",
       ...create,
     }));
     mockPropertyUpsert.mockImplementation(({ where, create }) => ({
@@ -49,9 +69,43 @@ describe("prisma seed", () => {
     }));
   });
 
-  it("upserts the admin user by email", async () => {
+  it("upserts the default roles", async () => {
+    await seedRoles(mockPrismaClient as unknown as Prisma);
+
+    expect(mockRoleUpsert).toHaveBeenCalledWith({
+      where: { name: "Administrador" },
+      update: {},
+      create: {
+        name: "Administrador",
+        allowedTabs: [
+          "panel",
+          "calendario",
+          "propiedades",
+          "reservas",
+          "huespedes",
+          "destinatarios",
+          "gastos",
+        ],
+        isDefaultAdmin: true,
+      },
+    });
+    expect(mockRoleUpsert).toHaveBeenCalledWith({
+      where: { name: "Gestion diaria" },
+      update: {},
+      create: {
+        name: "Gestion diaria",
+        allowedTabs: ["calendario", "gastos"],
+        isDefaultAdmin: false,
+      },
+    });
+  });
+
+  it("upserts the admin user by email using the Administrador role", async () => {
     await seedAdmin(mockPrismaClient as unknown as Prisma);
 
+    expect(mockRoleFindUnique).toHaveBeenCalledWith({
+      where: { name: "Administrador" },
+    });
     expect(mockUserUpsert).toHaveBeenCalledWith({
       where: { email: "admin@alquileresanita.com.ar" },
       update: {},
@@ -59,9 +113,24 @@ describe("prisma seed", () => {
         email: "admin@alquileresanita.com.ar",
         name: "Administrador",
         passwordHash: "hashed-password",
-        role: "ADMIN",
+        roleId: "role-admin",
       },
     });
+  });
+
+  it("warns and skips admin creation when default admin env vars are missing", async () => {
+    vi.stubEnv("DEFAULT_ADMIN_EMAIL", "");
+    vi.stubEnv("DEFAULT_ADMIN_PASSWORD", "");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await seedAdmin(mockPrismaClient as unknown as Prisma);
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(mockRoleFindUnique).not.toHaveBeenCalled();
+    expect(mockUserUpsert).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 
   it("upserts the four properties by slug", async () => {
@@ -125,18 +194,26 @@ describe("prisma seed", () => {
     ]);
   });
 
-  it("calls the sections in order: admin → properties → recipients → expenseTypes", async () => {
+  it("calls the sections in order: roles -> admin -> properties -> recipients -> expenseTypes", async () => {
     await seed(mockPrismaClient as unknown as Prisma);
 
-    // Relative ordering across the four upsert families.
+    expect(mockRoleUpsert.mock.invocationCallOrder[0]).toBeLessThan(
+      mockUserUpsert.mock.invocationCallOrder[0],
+    );
+    expect(mockUserUpsert.mock.invocationCallOrder[0]).toBeLessThan(
+      mockPropertyUpsert.mock.invocationCallOrder[0],
+    );
+    expect(mockPropertyUpsert.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRecipientUpsert.mock.invocationCallOrder[0],
+    );
     expect(mockRecipientUpsert.mock.invocationCallOrder[0]).toBeLessThan(
       mockExpenseTypeUpsert.mock.invocationCallOrder[0],
     );
-    expect(mockExpenseTypeUpsert).toHaveBeenCalledTimes(2);
   });
 
   it("is idempotent: running seed twice performs the same upserts and no creates", async () => {
     await seed(mockPrismaClient as unknown as Prisma);
+    const firstRunRoleCalls = mockRoleUpsert.mock.calls.length;
     const firstRunUserCalls = mockUserUpsert.mock.calls.length;
     const firstRunPropertyCalls = mockPropertyUpsert.mock.calls.length;
     const firstRunRecipientCalls = mockRecipientUpsert.mock.calls.length;
@@ -144,6 +221,7 @@ describe("prisma seed", () => {
 
     await seed(mockPrismaClient as unknown as Prisma);
 
+    expect(mockRoleUpsert).toHaveBeenCalledTimes(firstRunRoleCalls * 2);
     expect(mockUserUpsert).toHaveBeenCalledTimes(firstRunUserCalls * 2);
     expect(mockPropertyUpsert).toHaveBeenCalledTimes(firstRunPropertyCalls * 2);
     expect(mockRecipientUpsert).toHaveBeenCalledTimes(
@@ -164,12 +242,13 @@ describe("prisma seed", () => {
     // Simulate the admin already existing (upsert takes the update path).
     mockUserUpsert.mockResolvedValue({
       email: "admin@alquileresanita.com.ar",
-      role: "ADMIN",
+      roleId: "role-admin",
       name: "Administrador",
     });
 
     await seed(mockPrismaClient as unknown as Prisma);
 
+    expect(mockRoleUpsert).toHaveBeenCalledTimes(2);
     expect(mockUserUpsert).toHaveBeenCalledTimes(1);
     expect(mockPropertyUpsert).toHaveBeenCalledTimes(4);
     expect(mockRecipientUpsert).toHaveBeenCalledTimes(1);

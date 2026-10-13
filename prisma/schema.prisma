@@ -10,9 +10,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  OPERATIVE
+model Role {
+  id             String   @id @default(cuid(2))
+  name           String   @unique
+  allowedTabs    String[]
+  isDefaultAdmin Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  users          User[]
+
+  @@map("roles")
 }
 
 model Account {
@@ -46,15 +53,19 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid(2))
-  name          String?
-  email         String    @unique
-  emailVerified DateTime? @map("email_verified")
-  image         String?
-  passwordHash  String    @map("password_hash")
-  role          Role      @default(OPERATIVE)
-  accounts      Account[]
-  sessions      Session[]
+  id                 String    @id @default(cuid(2))
+  name               String?
+  firstName          String?   @map("first_name")
+  lastName           String?   @map("last_name")
+  email              String    @unique
+  emailVerified      DateTime? @map("email_verified")
+  image              String?
+  passwordHash       String    @map("password_hash")
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  roleId             String    @map("role_id")
+  role               Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  accounts           Account[]
+  sessions           Session[]
 
   @@map("users")
 }
@@ -66,6 +77,16 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verificationtokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid(2))
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
 }
 
 enum PaymentType {

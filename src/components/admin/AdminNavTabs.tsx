@@ -22,7 +22,7 @@ export function AdminNavTabs() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Secciones del panel" className="flex items-center gap-6">
+    <nav aria-label="Secciones del panel" className="flex flex-wrap items-center gap-1 md:gap-2">
       {TABS.map((tab) => {
         const active =
           tab.href === "/admin"
@@ -33,10 +33,10 @@ export function AdminNavTabs() {
             key={tab.href}
             href={tab.href}
             aria-current={active ? "page" : undefined}
-            className={`text-button-md underline-offset-8 hover:underline ${
+            className={`relative whitespace-nowrap rounded-sm px-3 py-2 text-caption transition-all md:text-nav-link ${
               active
-                ? "font-semibold text-ink underline"
-                : "text-muted hover:text-ink"
+                ? "font-semibold text-ink after:absolute after:bottom-0 after:left-3 after:right-3 after:h-[3px] after:rounded-full after:bg-primary"
+                : "font-medium text-muted hover:bg-cream-strong hover:text-ink"
             }`}
           >
             {tab.label}

@@ -11,6 +11,8 @@ const TABS = [
   { href: "/admin/huespedes", label: "Huéspedes", tab: "huespedes" },
   { href: "/admin/destinatarios", label: "Destinatarios", tab: "destinatarios" },
   { href: "/admin/gastos", label: "Gastos", tab: "gastos" },
+  { href: "/admin/usuarios", label: "Usuarios", tab: "usuarios" },
+  { href: "/admin/roles", label: "Roles", tab: "roles" },
 ] as const;
 
 interface AdminNavTabsProps {
@@ -31,9 +33,14 @@ export function AdminNavTabs({
 }: AdminNavTabsProps) {
   const pathname = usePathname();
 
-  const visibleTabs = isDefaultAdmin
+  const ADMIN_ONLY_TABS = new Set(["usuarios", "roles"]);
+
+const visibleTabs = isDefaultAdmin
     ? TABS
-    : TABS.filter((tab) => allowedTabs.includes(tab.tab));
+    : TABS.filter(
+        (tab) =>
+          !ADMIN_ONLY_TABS.has(tab.tab) && allowedTabs.includes(tab.tab),
+      );
 
   return (
     <nav aria-label="Secciones del panel" className="flex flex-wrap items-center gap-1 md:gap-2">

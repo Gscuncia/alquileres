@@ -17,6 +17,8 @@ const ALL_TAB_LABELS = [
   "Huéspedes",
   "Destinatarios",
   "Gastos",
+  "Usuarios",
+  "Roles",
 ];
 
 describe("AdminNavTabs", () => {
@@ -58,5 +60,19 @@ describe("AdminNavTabs", () => {
 
     const active = screen.getByRole("link", { name: "Calendario" });
     expect(active).toHaveAttribute("aria-current", "page");
+  });
+
+  it("hides Usuarios and Roles from non-admin users even if they are in allowedTabs", () => {
+    render(<AdminNavTabs allowedTabs={["usuarios", "roles"]} />);
+
+    expect(screen.queryByRole("link", { name: "Usuarios" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Roles" })).not.toBeInTheDocument();
+  });
+
+  it("shows Usuarios and Roles for default admins", () => {
+    render(<AdminNavTabs allowedTabs={[]} isDefaultAdmin />);
+
+    expect(screen.getByRole("link", { name: "Usuarios" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Roles" })).toBeInTheDocument();
   });
 });

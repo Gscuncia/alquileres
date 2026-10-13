@@ -10,6 +10,8 @@ const TAB_ROUTE_PREFIXES = [
   { prefix: "/admin/huespedes", tab: "huespedes" },
   { prefix: "/admin/destinatarios", tab: "destinatarios" },
   { prefix: "/admin/gastos", tab: "gastos" },
+  { prefix: "/admin/usuarios", tab: "usuarios" },
+  { prefix: "/admin/roles", tab: "roles" },
 ] as const;
 
 function getTabForPathname(pathname: string): string | null {
@@ -44,6 +46,16 @@ export default auth((req) => {
   const isDefaultAdmin = user.isDefaultAdmin === true;
   if (isDefaultAdmin) {
     return;
+  }
+
+  // Role and user management are reserved for default administrators.
+  if (
+    nextUrl.pathname === "/admin/usuarios" ||
+    nextUrl.pathname.startsWith("/admin/usuarios/") ||
+    nextUrl.pathname === "/admin/roles" ||
+    nextUrl.pathname.startsWith("/admin/roles/")
+  ) {
+    return Response.redirect(new URL("/admin", nextUrl.origin));
   }
 
   const tab = getTabForPathname(nextUrl.pathname);

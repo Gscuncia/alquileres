@@ -121,4 +121,38 @@ describe("middleware", () => {
     expect(res?.status).toBe(302);
     expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
   });
+
+  it("redirects non-admins from /admin/usuarios even if the tab is in allowedTabs", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin/usuarios",
+      makeUser({ allowedTabs: ["calendario", "gastos", "usuarios"] }),
+    );
+
+    const res = middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+  });
+
+  it("allows default admins to access /admin/usuarios and /admin/roles", async () => {
+    const middleware = await loadMiddleware();
+
+    const usersReq = buildRequest("/admin/usuarios", makeUser({
+      roleName: "Administrador",
+      roleId: "role-1",
+      allowedTabs: ["panel", "calendario", "propiedades", "reservas", "huespedes", "destinatarios", "gastos"],
+      isDefaultAdmin: true,
+    }));
+    const rolesReq = buildRequest("/admin/roles", makeUser({
+      roleName: "Administrador",
+      roleId: "role-1",
+      allowedTabs: ["panel", "calendario", "propiedades", "reservas", "huespedes", "destinatarios", "gastos"],
+      isDefaultAdmin: true,
+    }));
+
+    expect(middleware(usersReq)).toBeUndefined();
+    expect(middleware(rolesReq)).toBeUndefined();
+  });
 });

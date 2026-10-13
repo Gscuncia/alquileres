@@ -107,3 +107,12 @@ export function nightsBetween(
 
   return Math.max(0, nights);
 }
+
+/**
+ * Total nights of a stay: the count of midnights between the BA check-in
+ * calendar day and the check-out calendar day (`Oct 20 12:00 → Oct 22 10:00`
+ * is 2 nights).
+ */
+export function stayNights(checkIn: Date, checkOut: Date): number {
+  return nightsBetween(checkIn, checkOut, checkIn, checkOut);
+}

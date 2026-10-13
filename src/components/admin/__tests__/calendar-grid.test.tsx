@@ -5,6 +5,7 @@ import {
   CalendarGrid,
   DayDetailList,
   CHIP_PALETTE,
+  CELL_TINTS,
   type CalendarEvent,
 } from "../CalendarGrid";
 import { formatInTz, toUtc } from "@/lib/datetime";
@@ -212,7 +213,7 @@ describe("CalendarGrid", () => {
     expect(legend).toHaveTextContent("Chalet");
   });
 
-  it("single mode highlights covered days with the accent ring, chips keep the accent", () => {
+  it("single mode tints every covered day of the stay, chips keep the accent", () => {
     const { container } = render(
       <CalendarGrid
         month="2026-10"
@@ -230,14 +231,45 @@ describe("CalendarGrid", () => {
     const cellOf = (day: number): HTMLElement =>
       grid.children[7 + 3 + day - 1] as HTMLElement;
 
-    expect(cellOf(10).className).toContain("ring-sky");
-    expect(cellOf(9).className).not.toContain("ring-sky");
+    // Stay Oct 10 12:00 → Oct 13 10:00 tints the WHOLE period:
+    // check-in day, intermediate nights and the check-out day.
+    expect(cellOf(10).className).toContain("bg-sky/70");
+    expect(cellOf(11).className).toContain("bg-sky/70");
+    expect(cellOf(12).className).toContain("bg-sky/70");
+    expect(cellOf(13).className).toContain("bg-sky/70");
+    expect(cellOf(9).className).not.toContain("bg-sky/70");
+    expect(cellOf(14).className).not.toContain("bg-sky/70");
     // Chips carry the accent color in single mode.
     expect(
       Array.from(grid.querySelectorAll("a")).some((a) =>
         a.className.includes("bg-sky"),
       ),
     ).toBe(true);
+  });
+
+  it("todas mode tints the whole stay period with the property's palette tint", () => {
+    const { container } = render(
+      <CalendarGrid
+        month="2026-10"
+        events={[event({ property: { id: "p-2", title: "Casita" } })]}
+        properties={properties}
+        mode="todas"
+        chipHref={() => "#"}
+        dayHref={() => "#"}
+      />,
+    );
+
+    const grid = container.querySelector('[role="grid"]') as HTMLElement;
+    const cellOf = (day: number): HTMLElement =>
+      grid.children[7 + 3 + day - 1] as HTMLElement;
+
+    // Casita is palette slot 1 → its soft tint covers days 10..13.
+    expect(cellOf(10).className).toContain(CELL_TINTS[1]);
+    expect(cellOf(11).className).toContain(CELL_TINTS[1]);
+    expect(cellOf(12).className).toContain(CELL_TINTS[1]);
+    expect(cellOf(13).className).toContain(CELL_TINTS[1]);
+    expect(cellOf(9).className).not.toContain(CELL_TINTS[1]);
+    expect(cellOf(14).className).not.toContain(CELL_TINTS[1]);
   });
 
   it("todas mode chips use the stable palette (CHIP_PALETTE classes) instead of the single accent", () => {

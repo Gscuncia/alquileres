@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getAllPropertiesForAdmin } from "@/lib/properties-db";
-import { formatInTz, toUtc } from "@/lib/datetime";
+import { formatInTz, stayNights, toUtc } from "@/lib/datetime";
 import { formatMoney } from "@/lib/metrics";
 import { normalizeForSearch } from "@/lib/search";
 import { deleteBooking } from "@/app/admin/bookings/actions";
@@ -190,6 +190,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">DNI</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
+              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Noches</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Seña</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pago</th>
@@ -206,6 +207,9 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                 <td className={tableCellClasses}>{booking.guest.dni}</td>
                 <td className={tableCellClasses}>{formatInTz(booking.checkIn)}</td>
                 <td className={tableCellClasses}>{formatInTz(booking.checkOut)}</td>
+                <td className={`${tableCellClasses} text-ink`}>
+                  {stayNights(booking.checkIn, booking.checkOut)}
+                </td>
                 <td className={`${tableCellClasses} whitespace-nowrap`}>
                   {formatMoney(Number(booking.pricePerNight))}
                 </td>

@@ -51,6 +51,17 @@ export const CHIP_PALETTE = [
   "bg-plus text-on-dark",
 ] as const;
 
+/** Soft cell tints for COVERED days (readable day numbers over them). */
+export const CELL_TINTS = [
+  "bg-sky/70",
+  "bg-cream-strong",
+  "bg-luxe/25",
+  "bg-plus/25",
+] as const;
+
+/** Single-property mode always tints covered days with the accent. */
+const SINGLE_TINT = "bg-sky/70";
+
 function paletteIndexFor(properties: { id: string }[], propertyId: string): number {
   const index = properties.findIndex((property) => property.id === propertyId);
   if (index < 0) return 0;
@@ -104,19 +115,19 @@ export function buildDayChips(
   return chips;
 }
 
-function cellClasses(highlighted: boolean): string {
+function cellClasses(covered: boolean, tintClass?: string): string {
   const base =
     "flex h-28 flex-col items-start gap-1 rounded-sm p-1 text-caption-sm";
-  return highlighted
-    ? `${base} bg-surface-soft ring-2 ring-sky`
-    : `${base} bg-surface-soft`;
+  if (covered && tintClass) return `${base} ${tintClass}`;
+  return `${base} bg-surface-soft`;
 }
 
 function DayCell({
   dayStr,
   dayNumber,
   chips,
-  highlighted,
+  covered,
+  tintClass,
   mode,
   chipHref,
   dayHref,
@@ -124,7 +135,8 @@ function DayCell({
   dayStr: string;
   dayNumber: number;
   chips: CalendarChip[];
-  highlighted: boolean;
+  covered: boolean;
+  tintClass?: string;
   mode: CalendarGridMode;
   chipHref(bookingId: string): string;
   dayHref(dayStr: string): string;
@@ -133,12 +145,10 @@ function DayCell({
   const visible = chips.slice(0, MAX_CHIPS);
 
   return (
-    <div key={dayStr} className={cellClasses(highlighted)}>
+    <div key={dayStr} className={cellClasses(covered, tintClass)}>
       <Link
         href={dayHref(dayStr)}
-        className={`font-medium text-ink underline-offset-2 hover:underline ${
-          highlighted ? "ring-1 ring-sky" : ""
-        }`}
+        className="font-medium text-ink underline-offset-2 hover:underline"
       >
         {dayNumber}
       </Link>
@@ -210,9 +220,10 @@ function MonthBookingsList({
 /**
  * Server-rendered month grid with stay chips: `→ HH:mm Nombre` on the
  * check-in BA day, `← HH:mm Nombre` on the check-out day, at most 2 chips
- * per cell before the "+n más" day link. Days covered by any stay
- * (half-open [checkIn, checkOut)) are highlighted in `single` mode; in
- * `todas` mode chips carry the per-property palette colors plus a legend.
+ * per cell before the "+n más" day link. Every day covered by a stay
+ * (half-open [checkIn, checkOut)) is tinted with the occupying property's
+ * color (`single` mode uses the accent tint; `todas` uses the per-property
+ * palette plus a legend), so the full period is visible at a glance.
  */
 export function CalendarGrid({
   month,
@@ -232,7 +243,11 @@ export function CalendarGrid({
 
   const chipsByDay = buildDayChips(events, properties);
 
-  const coveredDays = new Set<string>();
+  // Covered days (half-open [checkIn, checkOut) against the BA calendar day)
+  // carry the tint of the property that occupies the largest part of that
+  // day, so every day of a stay is painted — not only the chip endpoints.
+  // Back-to-back stays on the same day resolve to the dominant stay.
+  const coveredTints = new Map<string, number>();
   for (let day = 1; day <= daysInMonth; day++) {
     const dayStr = `${month}-${String(day).padStart(2, "0")}`;
     const dayStart = toUtc(dayStr, "00:00");
@@ -246,11 +261,21 @@ export function CalendarGrid({
     ).padStart(2, "0")}-${String(nextMonthDay.getDate()).padStart(2, "0")}`;
     const dayEnd = toUtc(nextMonthStr, "00:00");
 
+    let bestOverlap = 0;
+    let bestIndex: number | undefined;
     for (const event of events) {
       if (event.checkIn < dayEnd && event.checkOut > dayStart) {
-        coveredDays.add(dayStr);
-        break;
+        const overlap =
+          Math.min(event.checkOut.getTime(), dayEnd.getTime()) -
+          Math.max(event.checkIn.getTime(), dayStart.getTime());
+        if (overlap > bestOverlap) {
+          bestOverlap = overlap;
+          bestIndex = paletteIndexFor(properties, event.property.id);
+        }
       }
+    }
+    if (bestIndex !== undefined) {
+      coveredTints.set(dayStr, bestIndex);
     }
   }
 
@@ -278,13 +303,21 @@ export function CalendarGrid({
         {Array.from({ length: daysInMonth }, (_, index) => {
           const day = index + 1;
           const dayStr = `${month}-${String(day).padStart(2, "0")}`;
+          const tintIndex = coveredTints.get(dayStr);
           return (
             <DayCell
               key={dayStr}
               dayStr={dayStr}
               dayNumber={day}
               chips={chipsByDay.get(dayStr) ?? []}
-              highlighted={mode === "single" && coveredDays.has(dayStr)}
+              covered={tintIndex !== undefined}
+              tintClass={
+                tintIndex === undefined
+                  ? undefined
+                  : mode === "single"
+                    ? SINGLE_TINT
+                    : CELL_TINTS[tintIndex] ?? CELL_TINTS[0]
+              }
               mode={mode}
               chipHref={chipHref}
               dayHref={dayHref}

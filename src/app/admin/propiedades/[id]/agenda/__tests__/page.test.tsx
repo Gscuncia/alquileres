@@ -140,7 +140,7 @@ describe("AgendaPage", () => {
     );
   });
 
-  it("highlights covered calendar days with the single-mode accent ring", async () => {
+  it("tints every covered day of the stay with the single-mode accent", async () => {
     const { container } = await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
@@ -148,16 +148,17 @@ describe("AgendaPage", () => {
       }),
     );
 
-    // Stay Oct 10 12:00 → Oct 13 10:00 covers Oct 10..12 (half-open).
+    // Stay Oct 10 12:00 → Oct 13 10:00 tints Oct 10..13 (checkout included).
     // Oct 1 2026 is a Thursday → Monday-first leading blanks = 3.
     const grid = container.querySelector('[role="grid"]') as HTMLElement;
     const cellOf = (day: number): HTMLElement =>
       grid.children[7 + 3 + day - 1] as HTMLElement;
 
-    expect(cellOf(10).className).toContain("ring-sky");
-    expect(cellOf(11).className).toContain("ring-sky");
-    expect(cellOf(12).className).toContain("ring-sky");
-    expect(cellOf(9).className).not.toContain("ring-sky");
+    expect(cellOf(10).className).toContain("bg-sky/70");
+    expect(cellOf(11).className).toContain("bg-sky/70");
+    expect(cellOf(12).className).toContain("bg-sky/70");
+    expect(cellOf(13).className).toContain("bg-sky/70");
+    expect(cellOf(9).className).not.toContain("bg-sky/70");
   });
 
   it("shows back-to-back stays together without a conflict indication", async () => {

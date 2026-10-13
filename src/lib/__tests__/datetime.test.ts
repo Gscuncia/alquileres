@@ -5,6 +5,7 @@ import {
   toTimeStr,
   formatInTz,
   nightsBetween,
+  stayNights,
 } from "@/lib/datetime";
 
 const ROUND_TRIP_CASES: Array<[string, string]> = [
@@ -150,6 +151,26 @@ describe("nightsBetween (clamped whole nights)", () => {
         from("2026-10-01"),
         from("2026-11-01"),
       ),
+    ).toBe(0);
+  });
+});
+
+describe("stayNights (total nights of a stay)", () => {
+  it("counts the midnights between check-in and check-out days", () => {
+    expect(
+      stayNights(toUtc("2026-10-10", "12:00"), toUtc("2026-10-13", "10:00")),
+    ).toBe(3);
+  });
+
+  it("returns 1 for an overnight stay", () => {
+    expect(
+      stayNights(toUtc("2026-10-10", "12:00"), toUtc("2026-10-11", "10:00")),
+    ).toBe(1);
+  });
+
+  it("returns 0 for a same-day stay", () => {
+    expect(
+      stayNights(toUtc("2026-10-10", "12:00"), toUtc("2026-10-10", "23:30")),
     ).toBe(0);
   });
 });

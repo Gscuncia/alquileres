@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
 import { Button } from "@/components/design-system";
+import {
+  AdminField,
+  AdminInput,
+  AdminError,
+} from "@/components/admin/primitives";
 
 export interface PropertyFormValues {
   id?: string;
@@ -45,11 +50,6 @@ export const EMPTY_PROPERTY_FORM: PropertyFormValues = {
   sortOrder: "0",
 };
 
-const inputClasses =
-  "w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink";
-
-const labelClasses = "block text-caption-sm font-medium text-ink mb-1";
-
 function slugify(value: string): string {
   return value
     .normalize("NFD")
@@ -57,11 +57,6 @@ function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-caption-sm text-primary-error-text">{message}</p>;
 }
 
 /**
@@ -94,38 +89,38 @@ function ListEditor({
 }) {
   return (
     <fieldset>
-      <legend className={labelClasses}>{label}</legend>
+      <legend className="block text-caption-sm font-medium text-ink mb-1">{label}</legend>
       <div className="space-y-2">
         {rows.map((row, index) => (
           <div key={index} className="flex items-start gap-2">
-            <input
+            <AdminInput
               name={name}
               type={type}
               value={row}
               placeholder={placeholder}
               aria-label={`${label} ${index + 1}`}
               onChange={(event) => onChange(index, event.target.value)}
-              className={inputClasses}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => onRemove(index)}
               aria-label={`Quitar fila ${index + 1} de ${label}`}
-              className="shrink-0 rounded-sm px-3 py-2 text-button-sm text-muted hover:bg-surface-soft"
             >
               Quitar
-            </button>
+            </Button>
           </div>
         ))}
       </div>
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onAdd}
-        className="mt-2 rounded-sm border border-ink bg-canvas px-3 py-1.5 text-button-sm text-ink hover:bg-surface-soft"
+        className="mt-2"
       >
         {addLabel}
-      </button>
-      <FieldError message={error} />
+      </Button>
+      <AdminError message={error} />
     </fieldset>
   );
 }
@@ -172,11 +167,8 @@ export function PropertyForm({
       {values.id && <input type="hidden" name="id" value={values.id} />}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="title" className={labelClasses}>
-            Título
-          </label>
-          <input
+        <AdminField label="Título" htmlFor="title" error={fieldErrors.title}>
+          <AdminInput
             id="title"
             name="title"
             type="text"
@@ -186,15 +178,10 @@ export function PropertyForm({
                 setSlug(slugify(event.target.value));
               }
             }}
-            className={inputClasses}
           />
-          <FieldError message={fieldErrors.title} />
-        </div>
-        <div>
-          <label htmlFor="slug" className={labelClasses}>
-            Slug
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Slug" htmlFor="slug" error={fieldErrors.slug}>
+          <AdminInput
             id="slug"
             name="slug"
             type="text"
@@ -203,114 +190,78 @@ export function PropertyForm({
               setSlugTouched(true);
               setSlug(event.target.value);
             }}
-            className={inputClasses}
           />
-          <FieldError message={fieldErrors.slug} />
-        </div>
+        </AdminField>
       </div>
 
-      <div>
-        <label htmlFor="location" className={labelClasses}>
-          Ubicación
-        </label>
-        <input
+      <AdminField label="Ubicación" htmlFor="location" error={fieldErrors.location}>
+        <AdminInput
           id="location"
           name="location"
           type="text"
           defaultValue={values.location}
-          className={inputClasses}
         />
-        <FieldError message={fieldErrors.location} />
-      </div>
+      </AdminField>
 
-      <div>
-        <label htmlFor="shortDescription" className={labelClasses}>
-          Descripción corta
-        </label>
-        <input
+      <AdminField label="Descripción corta" htmlFor="shortDescription" error={fieldErrors.shortDescription}>
+        <AdminInput
           id="shortDescription"
           name="shortDescription"
           type="text"
           defaultValue={values.shortDescription}
-          className={inputClasses}
         />
-        <FieldError message={fieldErrors.shortDescription} />
-      </div>
+      </AdminField>
 
-      <div>
-        <label htmlFor="description" className={labelClasses}>
-          Descripción completa
-        </label>
-        <textarea
+      <AdminField label="Descripción completa" htmlFor="description" error={fieldErrors.description}>
+        <AdminInput
+          as="textarea"
           id="description"
           name="description"
           rows={6}
           defaultValue={values.description}
-          className={inputClasses}
         />
         <p className="mt-1 text-caption-sm text-muted">
           Separá los párrafos con una línea en blanco.
         </p>
-        <FieldError message={fieldErrors.description} />
-      </div>
+      </AdminField>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div>
-          <label htmlFor="capacity" className={labelClasses}>
-            Capacidad
-          </label>
-          <input
+        <AdminField label="Capacidad" htmlFor="capacity" error={fieldErrors.capacity}>
+          <AdminInput
             id="capacity"
             name="capacity"
             type="number"
             min={1}
             defaultValue={values.capacity}
-            className={inputClasses}
           />
-          <FieldError message={fieldErrors.capacity} />
-        </div>
-        <div>
-          <label htmlFor="bedrooms" className={labelClasses}>
-            Dormitorios
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Dormitorios" htmlFor="bedrooms" error={fieldErrors.bedrooms}>
+          <AdminInput
             id="bedrooms"
             name="bedrooms"
             type="number"
             min={0}
             defaultValue={values.bedrooms}
-            className={inputClasses}
           />
-          <FieldError message={fieldErrors.bedrooms} />
-        </div>
-        <div>
-          <label htmlFor="bathrooms" className={labelClasses}>
-            Baños
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Baños" htmlFor="bathrooms" error={fieldErrors.bathrooms}>
+          <AdminInput
             id="bathrooms"
             name="bathrooms"
             type="number"
             min={0}
             defaultValue={values.bathrooms}
-            className={inputClasses}
           />
-          <FieldError message={fieldErrors.bathrooms} />
-        </div>
-        <div>
-          <label htmlFor="sortOrder" className={labelClasses}>
-            Orden
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Orden" htmlFor="sortOrder" error={fieldErrors.sortOrder}>
+          <AdminInput
             id="sortOrder"
             name="sortOrder"
             type="number"
             min={0}
             defaultValue={values.sortOrder}
-            className={inputClasses}
           />
-          <FieldError message={fieldErrors.sortOrder} />
-        </div>
+        </AdminField>
       </div>
 
       <ListEditor
@@ -354,7 +305,7 @@ export function PropertyForm({
       </p>
 
       <fieldset>
-        <legend className={labelClasses}>Color en el calendario</legend>
+        <legend className="block text-caption-sm font-medium text-ink mb-1">Color en el calendario</legend>
         <div className="flex flex-wrap items-center gap-4">
           <label className="inline-flex items-center gap-2">
             <input
@@ -381,7 +332,7 @@ export function PropertyForm({
             Se usa para las barras y fichas de esta propiedad en el Calendario.
           </p>
         </div>
-        <FieldError message={fieldErrors.color} />
+        <AdminError message={fieldErrors.color} />
       </fieldset>
 
       <div>

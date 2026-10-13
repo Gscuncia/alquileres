@@ -7,10 +7,32 @@ export interface AdminFieldProps {
   children: React.ReactNode;
 }
 
-export interface AdminInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  as?: "input" | "select" | "textarea";
+interface AdminInputBaseProps {
+  className?: string;
 }
+
+interface AdminInputInputProps
+  extends React.InputHTMLAttributes<HTMLInputElement>,
+    AdminInputBaseProps {
+  as?: "input";
+}
+
+interface AdminInputSelectProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement>,
+    AdminInputBaseProps {
+  as: "select";
+}
+
+interface AdminInputTextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+    AdminInputBaseProps {
+  as: "textarea";
+}
+
+export type AdminInputProps =
+  | AdminInputInputProps
+  | AdminInputSelectProps
+  | AdminInputTextareaProps;
 
 export interface AdminLabelProps
   extends React.LabelHTMLAttributes<HTMLLabelElement> {}
@@ -69,7 +91,7 @@ export function AdminInput({
     return <textarea className={classes} {...(rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)} />;
   }
 
-  return <input className={classes} {...rest} />;
+  return <input className={classes} {...(rest as React.InputHTMLAttributes<HTMLInputElement>)} />;
 }
 
 export function AdminLabel({ children, className = "", ...rest }: AdminLabelProps) {

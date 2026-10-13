@@ -3,6 +3,12 @@
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
 import { Button } from "@/components/design-system";
+import {
+  AdminField,
+  AdminInput,
+  AdminLabel,
+  AdminError,
+} from "@/components/admin/primitives";
 
 interface ExpenseTypeFormProps {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
@@ -13,16 +19,6 @@ interface ExpenseTypeFormProps {
     requiresProperty?: boolean | null;
   };
   submitLabel?: string;
-}
-
-const inputClasses =
-  "w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink";
-
-const labelClasses = "block text-caption-sm font-medium text-ink mb-1";
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-caption-sm text-primary-error-text">{message}</p>;
 }
 
 export function ExpenseTypeForm({
@@ -52,22 +48,17 @@ export function ExpenseTypeForm({
       )}
       {initialValues && <input type="hidden" name="id" value={initialValues.id} />}
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="name" className={labelClasses}>
-            Nombre
-          </label>
-          <input
+        <AdminField label="Nombre" htmlFor="name" error={state.fieldErrors?.name}>
+          <AdminInput
             id="name"
             name="name"
             type="text"
             placeholder="Mantenimiento"
             defaultValue={initialValues?.name ?? ""}
-            className={inputClasses}
           />
-          <FieldError message={state.fieldErrors?.name} />
-        </div>
+        </AdminField>
         <div>
-          <span className={labelClasses}>Propiedad</span>
+          <AdminLabel>Propiedad</AdminLabel>
           <label
             htmlFor="requiresProperty"
             className="flex items-center gap-2 text-body-sm text-body"

@@ -19,6 +19,12 @@ vi.mock("next/navigation", () => ({
   redirect: (path: string) => mockRedirect(path),
 }));
 
+vi.mock("next/image", () => ({
+  default: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
+    <img src={src} alt={alt} className={className} />
+  ),
+}));
+
 vi.mock("@/components/auth/signout-button", () => ({
   SignOutButton: () => <button type="button">Cerrar sesión</button>,
 }));
@@ -44,8 +50,16 @@ describe("AdminLayout", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/dashboard content/i)).toBeInTheDocument();
 
-    // Layout uses public content width and padding.
+    // Main-site logo and background treatment are applied to the admin header.
     const header = screen.getByRole("banner");
+    expect(header).toHaveClass("bg-header-bg");
+    expect(header).toHaveClass("border-cream-line");
+    expect(header).toHaveClass("shadow-sm");
+    const logo = screen.getByRole("img", { name: /alquileres anita/i });
+    expect(logo).toBeInTheDocument();
+    expect(logo.closest("a")).toHaveAttribute("href", "/");
+
+    // Layout uses public content width and padding.
     const main = screen.getByRole("main");
     expect(header).toHaveClass("px-4");
     expect(header).toHaveClass("md:px-6");

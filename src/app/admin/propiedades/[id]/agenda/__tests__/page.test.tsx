@@ -140,7 +140,7 @@ describe("AgendaPage", () => {
     );
   });
 
-  it("tints every covered day of the stay with the single-mode accent", async () => {
+  it("paints a small accent bar on every day of the stay", async () => {
     const { container } = await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
@@ -148,17 +148,21 @@ describe("AgendaPage", () => {
       }),
     );
 
-    // Stay Oct 10 12:00 → Oct 13 10:00 tints Oct 10..13 (checkout included).
+    // Stay Oct 10 12:00 → Oct 13 10:00 paints bars on Oct 10..13.
     // Oct 1 2026 is a Thursday → Monday-first leading blanks = 3.
     const grid = container.querySelector('[role="grid"]') as HTMLElement;
     const cellOf = (day: number): HTMLElement =>
       grid.children[7 + 3 + day - 1] as HTMLElement;
 
-    expect(cellOf(10).className).toContain("bg-sky/70");
-    expect(cellOf(11).className).toContain("bg-sky/70");
-    expect(cellOf(12).className).toContain("bg-sky/70");
-    expect(cellOf(13).className).toContain("bg-sky/70");
-    expect(cellOf(9).className).not.toContain("bg-sky/70");
+    const barOf = (day: number): HTMLElement | null =>
+      cellOf(day).querySelector("a.h-2") as HTMLElement | null;
+
+    for (const day of [10, 11, 12, 13]) {
+      expect(barOf(day)).not.toBeNull();
+      expect(barOf(day)?.className).toContain("bg-sky");
+    }
+    expect(barOf(9)).toBeNull();
+    expect(barOf(14)).toBeNull();
   });
 
   it("shows back-to-back stays together without a conflict indication", async () => {

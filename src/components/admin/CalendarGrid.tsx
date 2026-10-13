@@ -17,6 +17,14 @@ export interface CalendarChip {
   paletteIndex: number;
 }
 
+export interface CalendarBar {
+  bookingId: string;
+  /** Stable palette slot resolved from the property order. */
+  paletteIndex: number;
+  /** Tooltip/aria label: `Juan Pérez · Depto 1`. */
+  label: string;
+}
+
 export type CalendarGridMode = "todas" | "single";
 
 interface CalendarGridProps {
@@ -50,17 +58,6 @@ export const CHIP_PALETTE = [
   "bg-luxe text-on-dark",
   "bg-plus text-on-dark",
 ] as const;
-
-/** Soft cell tints for COVERED days (readable day numbers over them). */
-export const CELL_TINTS = [
-  "bg-sky/70",
-  "bg-cream-strong",
-  "bg-luxe/25",
-  "bg-plus/25",
-] as const;
-
-/** Single-property mode always tints covered days with the accent. */
-const SINGLE_TINT = "bg-sky/70";
 
 function paletteIndexFor(properties: { id: string }[], propertyId: string): number {
   const index = properties.findIndex((property) => property.id === propertyId);
@@ -115,19 +112,51 @@ export function buildDayChips(
   return chips;
 }
 
-function cellClasses(covered: boolean, tintClass?: string): string {
-  const base =
-    "flex h-28 flex-col items-start gap-1 rounded-sm p-1 text-caption-sm";
-  if (covered && tintClass) return `${base} ${tintClass}`;
-  return `${base} bg-surface-soft`;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Pure bar builder (exported for tests): every event paints ONE small
+ * colored rectangle per covered BA calendar day — from the check-in day
+ * through the check-out day inclusive — so a stay reads as a continuous
+ * strip of per-day rectangles in its property's palette color. Overlapping
+ * stays (back-to-back on the same day) each contribute their own bar.
+ */
+export function buildDayBars(
+  events: CalendarEvent[],
+  properties: { id: string; title: string }[],
+): Map<string, CalendarBar[]> {
+  const bars = new Map<string, CalendarBar[]>();
+
+  const push = (dayStr: string, bar: CalendarBar): void => {
+    const list = bars.get(dayStr) ?? [];
+    list.push(bar);
+    bars.set(dayStr, list);
+  };
+
+  for (const event of events) {
+    const paletteIndex = paletteIndexFor(properties, event.property.id);
+    const label = `${event.guest.firstName} ${event.guest.lastName} · ${event.property.title}`;
+
+    let cursor = toUtc(toDateStr(event.checkIn), "00:00");
+    const lastDay = toUtc(toDateStr(event.checkOut), "00:00");
+    while (cursor.getTime() <= lastDay.getTime()) {
+      push(toDateStr(cursor), { bookingId: event.id, paletteIndex, label });
+      cursor = new Date(cursor.getTime() + DAY_MS);
+    }
+  }
+
+  return bars;
+}
+
+function cellClasses(): string {
+  return "flex h-28 flex-col items-start gap-1 rounded-sm p-1 text-caption-sm bg-surface-soft";
 }
 
 function DayCell({
   dayStr,
   dayNumber,
   chips,
-  covered,
-  tintClass,
+  bars,
   mode,
   chipHref,
   dayHref,
@@ -135,8 +164,7 @@ function DayCell({
   dayStr: string;
   dayNumber: number;
   chips: CalendarChip[];
-  covered: boolean;
-  tintClass?: string;
+  bars: CalendarBar[];
   mode: CalendarGridMode;
   chipHref(bookingId: string): string;
   dayHref(dayStr: string): string;
@@ -145,13 +173,32 @@ function DayCell({
   const visible = chips.slice(0, MAX_CHIPS);
 
   return (
-    <div key={dayStr} className={cellClasses(covered, tintClass)}>
+    <div key={dayStr} className={cellClasses()}>
       <Link
         href={dayHref(dayStr)}
         className="font-medium text-ink underline-offset-2 hover:underline"
       >
         {dayNumber}
       </Link>
+      {bars.length > 0 && (
+        <div className="flex w-full flex-col gap-0.5">
+          {bars.map((bar) => (
+            <Link
+              key={`${dayStr}-${bar.bookingId}`}
+              href={chipHref(bar.bookingId)}
+              aria-label={`Reserva de ${bar.label}`}
+              title={bar.label}
+              className={`h-2 w-full rounded-full ${chipClass(
+                bar.paletteIndex,
+                mode,
+              )}`}
+            >
+              {/* Intentionally empty: the bar is the visual. */}
+              &nbsp;
+            </Link>
+          ))}
+        </div>
+      )}
       {visible.map((chip) => (
         <Link
           key={`${dayStr}-${chip.bookingId}-${chip.text}`}
@@ -218,12 +265,13 @@ function MonthBookingsList({
 }
 
 /**
- * Server-rendered month grid with stay chips: `→ HH:mm Nombre` on the
- * check-in BA day, `← HH:mm Nombre` on the check-out day, at most 2 chips
- * per cell before the "+n más" day link. Every day covered by a stay
- * (half-open [checkIn, checkOut)) is tinted with the occupying property's
- * color (`single` mode uses the accent tint; `todas` uses the per-property
- * palette plus a legend), so the full period is visible at a glance.
+ * Server-rendered month grid with stay chips and per-day color bars:
+ * `→ HH:mm Nombre` on the check-in BA day, `← HH:mm Nombre` on the
+ * check-out day, at most 2 chips per cell before the "+n más" day link.
+ * Every day of a stay (check-in through check-out day) carries a small
+ * colored rectangle per booking in the occupying property's palette color
+ * (`single` mode uses the accent; `todas` uses the per-property palette
+ * plus a legend), so overlapping stays stay visually distinguishable.
  */
 export function CalendarGrid({
   month,
@@ -242,42 +290,7 @@ export function CalendarGrid({
   const leadingBlanks = (firstOfMonth.getDay() + 6) % 7;
 
   const chipsByDay = buildDayChips(events, properties);
-
-  // Covered days (half-open [checkIn, checkOut) against the BA calendar day)
-  // carry the tint of the property that occupies the largest part of that
-  // day, so every day of a stay is painted — not only the chip endpoints.
-  // Back-to-back stays on the same day resolve to the dominant stay.
-  const coveredTints = new Map<string, number>();
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dayStr = `${month}-${String(day).padStart(2, "0")}`;
-    const dayStart = toUtc(dayStr, "00:00");
-    // Next day 00:00 AT-3 is the exclusive end of this calendar day.
-    const nextMonthDay =
-      day === daysInMonth
-        ? new Date(year, monthIndex + 1, 1)
-        : new Date(year, monthIndex, day + 1);
-    const nextMonthStr = `${nextMonthDay.getFullYear()}-${String(
-      nextMonthDay.getMonth() + 1,
-    ).padStart(2, "0")}-${String(nextMonthDay.getDate()).padStart(2, "0")}`;
-    const dayEnd = toUtc(nextMonthStr, "00:00");
-
-    let bestOverlap = 0;
-    let bestIndex: number | undefined;
-    for (const event of events) {
-      if (event.checkIn < dayEnd && event.checkOut > dayStart) {
-        const overlap =
-          Math.min(event.checkOut.getTime(), dayEnd.getTime()) -
-          Math.max(event.checkIn.getTime(), dayStart.getTime());
-        if (overlap > bestOverlap) {
-          bestOverlap = overlap;
-          bestIndex = paletteIndexFor(properties, event.property.id);
-        }
-      }
-    }
-    if (bestIndex !== undefined) {
-      coveredTints.set(dayStr, bestIndex);
-    }
-  }
+  const barsByDay = buildDayBars(events, properties);
 
   return (
     <section className="space-y-4">
@@ -303,21 +316,13 @@ export function CalendarGrid({
         {Array.from({ length: daysInMonth }, (_, index) => {
           const day = index + 1;
           const dayStr = `${month}-${String(day).padStart(2, "0")}`;
-          const tintIndex = coveredTints.get(dayStr);
           return (
             <DayCell
               key={dayStr}
               dayStr={dayStr}
               dayNumber={day}
               chips={chipsByDay.get(dayStr) ?? []}
-              covered={tintIndex !== undefined}
-              tintClass={
-                tintIndex === undefined
-                  ? undefined
-                  : mode === "single"
-                    ? SINGLE_TINT
-                    : CELL_TINTS[tintIndex] ?? CELL_TINTS[0]
-              }
+              bars={barsByDay.get(dayStr) ?? []}
               mode={mode}
               chipHref={chipHref}
               dayHref={dayHref}

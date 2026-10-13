@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
   buildDayChips,
+  buildDayBars,
   CalendarGrid,
   DayDetailList,
   CHIP_PALETTE,
-  CELL_TINTS,
   type CalendarEvent,
 } from "../CalendarGrid";
 import { formatInTz, toUtc } from "@/lib/datetime";
@@ -213,7 +213,7 @@ describe("CalendarGrid", () => {
     expect(legend).toHaveTextContent("Chalet");
   });
 
-  it("single mode tints every covered day of the stay, chips keep the accent", () => {
+  it("single mode paints a small accent bar on every day of the stay", () => {
     const { container } = render(
       <CalendarGrid
         month="2026-10"
@@ -231,14 +231,17 @@ describe("CalendarGrid", () => {
     const cellOf = (day: number): HTMLElement =>
       grid.children[7 + 3 + day - 1] as HTMLElement;
 
-    // Stay Oct 10 12:00 → Oct 13 10:00 tints the WHOLE period:
-    // check-in day, intermediate nights and the check-out day.
-    expect(cellOf(10).className).toContain("bg-sky/70");
-    expect(cellOf(11).className).toContain("bg-sky/70");
-    expect(cellOf(12).className).toContain("bg-sky/70");
-    expect(cellOf(13).className).toContain("bg-sky/70");
-    expect(cellOf(9).className).not.toContain("bg-sky/70");
-    expect(cellOf(14).className).not.toContain("bg-sky/70");
+    const barOf = (day: number): HTMLElement | null =>
+      cellOf(day).querySelector("a.h-2") as HTMLElement | null;
+
+    // Stay Oct 10 12:00 → Oct 13 10:00: a bar on the whole period
+    // (check-in day, intermediate nights, check-out day).
+    for (const day of [10, 11, 12, 13]) {
+      expect(barOf(day)).not.toBeNull();
+      expect(barOf(day)?.className).toContain("bg-sky");
+    }
+    expect(barOf(9)).toBeNull();
+    expect(barOf(14)).toBeNull();
     // Chips carry the accent color in single mode.
     expect(
       Array.from(grid.querySelectorAll("a")).some((a) =>
@@ -247,7 +250,7 @@ describe("CalendarGrid", () => {
     ).toBe(true);
   });
 
-  it("todas mode tints the whole stay period with the property's palette tint", () => {
+  it("todas mode bars use the property's palette color across the whole stay", () => {
     const { container } = render(
       <CalendarGrid
         month="2026-10"
@@ -263,13 +266,45 @@ describe("CalendarGrid", () => {
     const cellOf = (day: number): HTMLElement =>
       grid.children[7 + 3 + day - 1] as HTMLElement;
 
-    // Casita is palette slot 1 → its soft tint covers days 10..13.
-    expect(cellOf(10).className).toContain(CELL_TINTS[1]);
-    expect(cellOf(11).className).toContain(CELL_TINTS[1]);
-    expect(cellOf(12).className).toContain(CELL_TINTS[1]);
-    expect(cellOf(13).className).toContain(CELL_TINTS[1]);
-    expect(cellOf(9).className).not.toContain(CELL_TINTS[1]);
-    expect(cellOf(14).className).not.toContain(CELL_TINTS[1]);
+    const barOf = (day: number): HTMLElement | null =>
+      cellOf(day).querySelector("a.h-2") as HTMLElement | null;
+
+    // Casita is palette slot 1 → its bars cover days 10..13.
+    for (const day of [10, 11, 12, 13]) {
+      expect(barOf(day)?.className).toContain(CHIP_PALETTE[1]);
+    }
+    expect(barOf(9)).toBeNull();
+    expect(barOf(14)).toBeNull();
+  });
+
+  it("buildDayBars keeps one bar per booking per day, including back-to-back days", () => {
+    const stayA = event({
+      id: "b-a",
+      checkIn: toUtc("2026-10-08", "12:00"),
+      checkOut: toUtc("2026-10-10", "10:00"),
+    });
+    const stayB = event({
+      id: "b-b",
+      guest: { firstName: "María", lastName: "López" },
+      checkIn: toUtc("2026-10-10", "12:00"),
+      checkOut: toUtc("2026-10-12", "10:00"),
+    });
+
+    const bars = buildDayBars([stayA, stayB], properties);
+
+    // Interior days carry exactly one bar each.
+    expect(bars.get("2026-10-08")).toEqual([
+      { bookingId: "b-a", paletteIndex: 0, label: "Juan Pérez · Depto 1" },
+    ]);
+    expect(bars.get("2026-10-11")).toEqual([
+      { bookingId: "b-b", paletteIndex: 0, label: "María López · Depto 1" },
+    ]);
+    // The back-to-back day (Oct 10) carries BOTH bars, one per booking.
+    expect(bars.get("2026-10-10")).toHaveLength(2);
+    expect(bars.get("2026-10-10")?.map((bar) => bar.bookingId)).toEqual([
+      "b-a",
+      "b-b",
+    ]);
   });
 
   it("todas mode chips use the stable palette (CHIP_PALETTE classes) instead of the single accent", () => {

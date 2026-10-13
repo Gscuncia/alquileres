@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getAllPropertiesForAdmin } from "@/lib/properties-db";
 import { formatInTz, toUtc } from "@/lib/datetime";
+import { formatMoney } from "@/lib/metrics";
 import { normalizeForSearch } from "@/lib/search";
 import { deleteBooking } from "@/app/admin/bookings/actions";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
@@ -82,13 +83,26 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
 
   return (
     <div className="space-y-6">
-      <h2 className="text-display-sm font-semibold text-ink">Reservas</h2>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-display-sm font-semibold text-ink">Reservas</h2>
+        <Link
+          href="/admin/calendario?nueva=1"
+          className="inline-flex h-10 items-center justify-center rounded-sm bg-primary px-4 text-button-sm font-medium text-on-primary transition-colors hover:bg-primary-active focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        >
+          + Nueva reserva
+        </Link>
+      </div>
 
       <form
         method="get"
         action="/admin/reservas"
         className="grid grid-cols-1 gap-4 rounded-md border border-hairline bg-canvas p-4 md:grid-cols-5"
       >
+        <div className="md:col-span-5">
+          <p className="text-caption-sm text-muted">
+            Estos campos solo filtran la lista; no guardan cambios.
+          </p>
+        </div>
         <div>
           <label htmlFor="propiedad" className={labelClasses}>
             Propiedad
@@ -133,7 +147,8 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
         </div>
         <div>
           <label htmlFor="q" className={labelClasses}>
-            Huésped o DNI
+            Buscar huésped o DNI
+            <span className="text-muted"> (filtro)</span>
           </label>
           <input
             id="q"
@@ -149,7 +164,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
             type="submit"
             className="rounded-sm border border-ink bg-canvas px-4 py-2 text-button-sm font-medium text-ink hover:bg-surface-soft"
           >
-            Aplicar
+            Filtrar
           </button>
           <Link
             href="/admin/reservas"
@@ -164,7 +179,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
         <div className="rounded-md border border-hairline bg-surface-soft p-6 text-body-md text-body">
           {hasFilters
             ? "No hay reservas que coincidan con los filtros."
-            : "Todavía no hay reservas cargadas."}
+            : "Todavía no hay reservas cargadas. Creá la primera con el botón Nueva reserva o haciendo clic en un día del Calendario."}
         </div>
       ) : (
         <table className="w-full rounded-md border border-hairline bg-canvas">
@@ -175,6 +190,8 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">DNI</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
+              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
+              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Seña</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pago</th>
               <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
             </tr>
@@ -189,6 +206,14 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                 <td className={tableCellClasses}>{booking.guest.dni}</td>
                 <td className={tableCellClasses}>{formatInTz(booking.checkIn)}</td>
                 <td className={tableCellClasses}>{formatInTz(booking.checkOut)}</td>
+                <td className={`${tableCellClasses} whitespace-nowrap`}>
+                  {formatMoney(Number(booking.pricePerNight))}
+                </td>
+                <td className={`${tableCellClasses} whitespace-nowrap`}>
+                  {Number(booking.depositAmount) > 0
+                    ? formatMoney(Number(booking.depositAmount))
+                    : "—"}
+                </td>
                 <td className={tableCellClasses}>
                   {booking.paymentType === "TRANSFERENCIA"
                     ? `Transferencia${booking.transferRecipient ? ` · ${booking.transferRecipient.name}` : ""}`

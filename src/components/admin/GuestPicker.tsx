@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { normalizeForSearch } from "@/lib/search";
 
 export interface GuestOption {
   id: string;
@@ -22,34 +21,20 @@ const inputClasses =
   "w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink";
 
 /**
- * Searchable guest selector: free-text filter (accent-insensitive via
- * `normalizeForSearch`) over the serialized guest list, selectable rows
- * "Nombre Apellido — DNI", and a hidden `guestId` input carrying the
- * selection to the server action. Includes a quick-link to create a
- * guest first when none of the existing ones fits.
+ * Guest selector: a native dropdown listing every loaded guest
+ * ("Nombre Apellido — DNI"). Required so a booking always links to an
+ * existing guest from the guest agenda, never a free-text name. Includes a
+ * prominent call to action when no guests are loaded yet.
  */
 export function GuestPicker({ guests, defaultValue, fieldError }: GuestPickerProps) {
-  const [selectedId, setSelectedId] = useState(defaultValue ?? "");
-  const [query, setQuery] = useState("");
+  const [guestId, setGuestId] = useState(defaultValue ?? "");
 
-  const normalizedQuery = normalizeForSearch(query);
-  const selected = guests.find((guest) => guest.id === selectedId) ?? null;
-
-  const filtered = normalizedQuery
-    ? guests.filter((guest) =>
-        [guest.firstName, guest.lastName, guest.dni, guest.phone].some(
-          (field) => normalizeForSearch(field).includes(normalizedQuery),
-        ),
-      )
-    : guests;
-
-  return (
-    <div className="space-y-2">
-      <label htmlFor="guest-search" className="block text-caption-sm font-medium text-ink mb-1">
-        Huésped <span className="text-primary-error-text">*</span>
-      </label>
-      <input type="hidden" name="guestId" value={selectedId} />
-      {guests.length === 0 ? (
+  if (guests.length === 0) {
+    return (
+      <div className="space-y-2">
+        <label htmlFor="guestId" className="block text-caption-sm font-medium text-ink mb-1">
+          Huésped <span className="text-primary-error-text">*</span>
+        </label>
         <div className="rounded-sm border border-hairline bg-surface-soft px-4 py-3">
           <p className="text-body-sm text-ink">
             Todavía no hay huéspedes cargados. Primero creá el huésped en la agenda de huéspedes y volvé a esta
@@ -61,69 +46,46 @@ export function GuestPicker({ guests, defaultValue, fieldError }: GuestPickerPro
           >
             Crear huésped primero
           </Link>
-        </div>
-      ) : (
-        <>
-          <input
-            id="guest-search"
-            type="text"
-            placeholder="Buscar huésped…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className={inputClasses}
-          />
-          {selected ? (
-            <p className="text-caption-sm text-ink">
-              Seleccionado:{" "}
-              <span className="font-medium">
-                {selected.firstName} {selected.lastName} — {selected.dni}
-              </span>
-            </p>
-          ) : (
-            <p className="text-caption-sm text-muted">Ningún huésped seleccionado.</p>
-          )}
           {fieldError && (
-            <p className="text-caption-sm text-primary-error-text">{fieldError}</p>
+            <p className="mt-2 text-caption-sm text-primary-error-text">{fieldError}</p>
           )}
-          <ul className="max-h-48 divide-y divide-hairline overflow-y-auto rounded-sm border border-hairline">
-            {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-caption-sm text-muted">
-                No hay huéspedes que coincidan con la búsqueda.
-              </li>
-            ) : (
-              filtered.map((guest) => (
-                <li key={guest.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(guest.id)}
-                    aria-pressed={guest.id === selectedId}
-                    className={`flex w-full items-center justify-between gap-4 px-3 py-2 text-left text-body-sm hover:bg-surface-soft ${
-                      guest.id === selectedId ? "font-medium text-ink" : "text-body"
-                    }`}
-                  >
-                    <span>
-                      {guest.firstName} {guest.lastName} — {guest.dni}
-                    </span>
-                    {guest.id === selectedId && <span aria-hidden="true">✓</span>}
-                  </button>
-                </li>
-              ))
-            )}
-          </ul>
-          <p className="text-caption-sm text-muted">
-            ¿No está?{" "}
-            <Link
-              href="/admin/huespedes"
-              className="text-ink underline-offset-2 hover:underline"
-            >
-              Crear huésped
-            </Link>
-          </p>
-        </>
-      )}
-      {guests.length === 0 && fieldError && (
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor="guestId" className="block text-caption-sm font-medium text-ink mb-1">
+        Huésped <span className="text-primary-error-text">*</span>
+      </label>
+      <select
+        id="guestId"
+        name="guestId"
+        required
+        value={guestId}
+        onChange={(event) => setGuestId(event.target.value)}
+        className={inputClasses}
+      >
+        <option value="">Seleccionar huésped…</option>
+        {guests.map((guest) => (
+          <option key={guest.id} value={guest.id}>
+            {guest.firstName} {guest.lastName} — DNI {guest.dni}
+          </option>
+        ))}
+      </select>
+      {fieldError && (
         <p className="text-caption-sm text-primary-error-text">{fieldError}</p>
       )}
+      <p className="text-caption-sm text-muted">
+        ¿El huésped no está cargado?{" "}
+        <Link
+          href="/admin/huespedes"
+          className="text-ink underline-offset-2 hover:underline"
+        >
+          Crear huésped
+        </Link>
+      </p>
     </div>
   );
 }

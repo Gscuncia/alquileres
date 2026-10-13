@@ -30,29 +30,39 @@ describe("GuestPicker", () => {
     const link = screen.getByRole("link", { name: /crear huésped primero/i });
     expect(link).toHaveAttribute("href", "/admin/huespedes");
     expect(
-      screen.queryByPlaceholderText(/buscar huésped/i),
+      screen.queryByRole("combobox", { name: /huésped/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("selects a guest and carries the id in the hidden guestId input", () => {
+  it("renders a required native dropdown listing loaded guests", () => {
     render(<GuestPicker guests={guests} />);
 
-    fireEvent.click(screen.getByText("Juan Pérez — 30123456"));
+    const select = screen.getByRole("combobox", { name: /huésped/i });
+    expect(select).toHaveAttribute("required");
 
-    const hidden = document.querySelector('input[type="hidden"][name="guestId"]');
-    expect(hidden).not.toBeNull();
-    expect(hidden).toHaveAttribute("value", "g1");
-    expect(screen.getByText(/seleccionado:/i)).toBeInTheDocument();
+    // Loaded guests appear as options, identified by name + DNI.
+    expect(
+      screen.getByRole("option", { name: "Juan Pérez — DNI 30123456" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Ana García — DNI 27890123" }),
+    ).toBeInTheDocument();
   });
 
-  it("filters guests by accent-insensitive query", () => {
+  it("starts without a selection and submits the chosen guest id", () => {
     render(<GuestPicker guests={guests} />);
 
-    fireEvent.change(screen.getByPlaceholderText(/buscar huésped/i), {
-      target: { value: "perez" },
-    });
+    const select = screen.getByRole("combobox", { name: /huésped/i }) as HTMLSelectElement;
+    expect(select).toHaveValue("");
 
-    expect(screen.getByText("Juan Pérez — 30123456")).toBeInTheDocument();
-    expect(screen.queryByText("Ana García — 27890123")).not.toBeInTheDocument();
+    fireEvent.change(select, { target: { value: "g1" } });
+    expect(select).toHaveValue("g1");
+  });
+
+  it("preselects the given guest when editing", () => {
+    render(<GuestPicker guests={guests} defaultValue="g2" />);
+
+    const select = screen.getByRole("combobox", { name: /huésped/i }) as HTMLSelectElement;
+    expect(select).toHaveValue("g2");
   });
 });

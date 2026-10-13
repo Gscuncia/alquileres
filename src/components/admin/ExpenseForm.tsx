@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
 import { Button } from "@/components/design-system";
+import {
+  AdminField,
+  AdminInput,
+  AdminError,
+} from "@/components/admin/primitives";
 
 export interface ExpenseTypeOption {
   id: string;
@@ -27,16 +32,6 @@ interface ExpenseFormProps {
     date: string;
   };
   submitLabel?: string;
-}
-
-const inputClasses =
-  "w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink";
-
-const labelClasses = "block text-caption-sm font-medium text-ink mb-1";
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-caption-sm text-primary-error-text">{message}</p>;
 }
 
 export function ExpenseForm({
@@ -72,16 +67,13 @@ export function ExpenseForm({
         <input type="hidden" name="id" value={initialValues.id} />
       )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="typeId" className={labelClasses}>
-            Tipo
-          </label>
-          <select
+        <AdminField label="Tipo" htmlFor="typeId" error={state.fieldErrors?.typeId}>
+          <AdminInput
+            as="select"
             id="typeId"
             name="typeId"
             value={typeId}
             onChange={(event) => setTypeId(event.target.value)}
-            className={inputClasses}
           >
             <option value="">Seleccionar tipo…</option>
             {expenseTypes.map((type) => (
@@ -89,19 +81,15 @@ export function ExpenseForm({
                 {type.name}
               </option>
             ))}
-          </select>
-          <FieldError message={state.fieldErrors?.typeId} />
-        </div>
+          </AdminInput>
+        </AdminField>
         {selectedType?.requiresProperty ? (
-          <div>
-            <label htmlFor="propertyId" className={labelClasses}>
-              Propiedad
-            </label>
-            <select
+          <AdminField label="Propiedad" htmlFor="propertyId" error={state.fieldErrors?.propertyId}>
+            <AdminInput
+              as="select"
               id="propertyId"
               name="propertyId"
               defaultValue={initialValues?.propertyId ?? ""}
-              className={inputClasses}
             >
               <option value="">Seleccionar…</option>
               {properties.map((property) => (
@@ -109,32 +97,23 @@ export function ExpenseForm({
                   {property.title}
                 </option>
               ))}
-            </select>
-            <FieldError message={state.fieldErrors?.propertyId} />
-          </div>
+            </AdminInput>
+          </AdminField>
         ) : (
           // General types submit an empty propertyId; the action clears it.
           <input type="hidden" name="propertyId" value="" />
         )}
-        <div>
-          <label htmlFor="category" className={labelClasses}>
-            Categoría
-          </label>
-          <input
+        <AdminField label="Categoría" htmlFor="category" error={state.fieldErrors?.category}>
+          <AdminInput
             id="category"
             name="category"
             type="text"
             placeholder="Plomería"
             defaultValue={initialValues?.category ?? ""}
-            className={inputClasses}
           />
-          <FieldError message={state.fieldErrors?.category} />
-        </div>
-        <div>
-          <label htmlFor="amount" className={labelClasses}>
-            Importe
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Importe" htmlFor="amount" error={state.fieldErrors?.amount}>
+          <AdminInput
             id="amount"
             name="amount"
             type="number"
@@ -142,37 +121,26 @@ export function ExpenseForm({
             min="0"
             placeholder="15000"
             defaultValue={initialValues?.amount ?? ""}
-            className={inputClasses}
           />
-          <FieldError message={state.fieldErrors?.amount} />
-        </div>
-        <div>
-          <label htmlFor="date" className={labelClasses}>
-            Fecha
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Fecha" htmlFor="date" error={state.fieldErrors?.date}>
+          <AdminInput
             id="date"
             name="date"
             type="date"
             defaultValue={initialValues?.date ?? ""}
-            className={inputClasses}
           />
-          <FieldError message={state.fieldErrors?.date} />
-        </div>
+        </AdminField>
       </div>
-      <div>
-        <label htmlFor="description" className={labelClasses}>
-          Descripción (opcional)
-        </label>
-        <textarea
+      <AdminField label="Descripción (opcional)" htmlFor="description" error={state.fieldErrors?.description}>
+        <AdminInput
+          as="textarea"
           id="description"
           name="description"
           rows={2}
           defaultValue={initialValues?.description ?? ""}
-          className={inputClasses}
         />
-        <FieldError message={state.fieldErrors?.description} />
-      </div>
+      </AdminField>
       <div className="flex justify-end">
         <Button type="submit" variant="primary">
           {submitLabel}

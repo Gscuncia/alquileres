@@ -8,6 +8,12 @@ import {
 } from "@/app/admin/recipients/actions";
 import { RecipientForm } from "@/components/admin/RecipientForm";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
+import {
+  AdminPanel,
+  AdminEmptyState,
+  AdminPageHeader,
+} from "@/components/admin/primitives";
+import { Button } from "@/components/design-system";
 
 interface DestinatariosPageProps {
   searchParams?: { destinatario?: string; error?: string };
@@ -37,7 +43,7 @@ export default async function DestinatariosPage({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-display-sm font-semibold text-ink">Destinatarios</h2>
+      <AdminPageHeader title="Destinatarios" />
 
       {deleteBlocked && (
         <div
@@ -48,63 +54,63 @@ export default async function DestinatariosPage({
         </div>
       )}
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-title-md font-semibold text-ink">
-            {editing ? "Editar destinatario" : "Nuevo destinatario"}
-          </h3>
-          {editing && (
-            <Link
-              href="/admin/destinatarios"
-              className="text-button-sm text-muted underline-offset-2 hover:underline"
-            >
-              Cancelar edición
-            </Link>
-          )}
+      <AdminPanel>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-title-md font-semibold text-ink">
+              {editing ? "Editar destinatario" : "Nuevo destinatario"}
+            </h3>
+            {editing && (
+              <Button asChild variant="tertiary">
+                <Link href="/admin/destinatarios">Cancelar edición</Link>
+              </Button>
+            )}
+          </div>
+          <RecipientForm
+            action={editing ? updateRecipient : createRecipient}
+            initialValues={editing ? { id: editing.id, name: editing.name } : undefined}
+            submitLabel={editing ? "Guardar cambios" : "Crear destinatario"}
+          />
         </div>
-        <RecipientForm
-          action={editing ? updateRecipient : createRecipient}
-          initialValues={editing ? { id: editing.id, name: editing.name } : undefined}
-          submitLabel={editing ? "Guardar cambios" : "Crear destinatario"}
-        />
-      </div>
+      </AdminPanel>
 
       {recipients.length === 0 ? (
-        <div className="rounded-md border border-hairline bg-surface-soft p-6 text-body-md text-body">
+        <AdminEmptyState>
           Todavía no hay destinatarios cargados.
-        </div>
+        </AdminEmptyState>
       ) : (
-        <table className="w-full rounded-md border border-hairline bg-canvas">
-          <thead>
-            <tr className="bg-surface-soft text-left">
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Nombre</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Reservas asociadas</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recipients.map((recipient) => (
-              <tr key={recipient.id}>
-                <td className={`${tableCellClasses} text-ink`}>{recipient.name}</td>
-                <td className={tableCellClasses}>{recipient._count.bookings}</td>
-                <td className={tableCellClasses}>
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/admin/destinatarios?destinatario=${recipient.id}`}
-                      className="text-button-sm text-ink underline-offset-2 hover:underline"
-                    >
-                      Editar
-                    </Link>
-                    <form action={deleteRecipient}>
-                      <input type="hidden" name="id" value={recipient.id} />
-                      <ConfirmButton />
-                    </form>
-                  </div>
-                </td>
+        <AdminPanel>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-surface-soft text-left">
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Nombre</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Reservas asociadas</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {recipients.map((recipient) => (
+                <tr key={recipient.id}>
+                  <td className={`${tableCellClasses} text-ink`}>{recipient.name}</td>
+                  <td className={tableCellClasses}>{recipient._count.bookings}</td>
+                  <td className={tableCellClasses}>
+                    <div className="flex items-center gap-3">
+                      <Button asChild variant="tertiary">
+                        <Link href={`/admin/destinatarios?destinatario=${recipient.id}`}>
+                          Editar
+                        </Link>
+                      </Button>
+                      <form action={deleteRecipient}>
+                        <input type="hidden" name="id" value={recipient.id} />
+                        <ConfirmButton />
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </AdminPanel>
       )}
     </div>
   );

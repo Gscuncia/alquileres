@@ -7,6 +7,14 @@ import { formatMoney } from "@/lib/metrics";
 import { normalizeForSearch } from "@/lib/search";
 import { deleteBooking } from "@/app/admin/bookings/actions";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
+import {
+  AdminPanel,
+  AdminEmptyState,
+  AdminPageHeader,
+  AdminField,
+  AdminInput,
+} from "@/components/admin/primitives";
+import { Button } from "@/components/design-system";
 
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -15,11 +23,6 @@ interface ReservasPageProps {
 }
 
 const tableCellClasses = "border-b border-hairline px-4 py-3 text-body-sm text-body";
-
-const inputClasses =
-  "w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink";
-
-const labelClasses = "block text-caption-sm font-medium text-ink mb-1";
 
 /** Exclusive upper bound `00:00 (UTC-3)` of the day AFTER the selected date. */
 function endOfDayExclusive(dateStr: string): Date {
@@ -83,15 +86,14 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-display-sm font-semibold text-ink">Reservas</h2>
-        <Link
-          href="/admin/calendario?nueva=1"
-          className="inline-flex h-10 items-center justify-center rounded-sm bg-primary px-4 text-button-sm font-medium text-on-primary transition-colors hover:bg-primary-active focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-        >
-          + Nueva reserva
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="Reservas"
+        action={
+          <Button asChild variant="primary">
+            <Link href="/admin/calendario?nueva=1">+ Nueva reserva</Link>
+          </Button>
+        }
+      />
 
       <form
         method="get"
@@ -103,15 +105,12 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
             Estos campos solo filtran la lista; no guardan cambios.
           </p>
         </div>
-        <div>
-          <label htmlFor="propiedad" className={labelClasses}>
-            Propiedad
-          </label>
-          <select
+        <AdminField label="Propiedad" htmlFor="propiedad">
+          <AdminInput
+            as="select"
             id="propiedad"
             name="propiedad"
             defaultValue={propiedad}
-            className={inputClasses}
           >
             <option value="">Todas</option>
             {properties.map((property) => (
@@ -119,129 +118,113 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                 {property.title}
               </option>
             ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="desde" className={labelClasses}>
-            Ingreso desde
-          </label>
-          <input
+          </AdminInput>
+        </AdminField>
+        <AdminField label="Ingreso desde" htmlFor="desde">
+          <AdminInput
             id="desde"
             name="desde"
             type="date"
             defaultValue={desde}
-            className={inputClasses}
           />
-        </div>
-        <div>
-          <label htmlFor="hasta" className={labelClasses}>
-            Ingreso hasta
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Ingreso hasta" htmlFor="hasta">
+          <AdminInput
             id="hasta"
             name="hasta"
             type="date"
             defaultValue={hasta}
-            className={inputClasses}
           />
-        </div>
-        <div>
-          <label htmlFor="q" className={labelClasses}>
-            Buscar huésped o DNI
-            <span className="text-muted"> (filtro)</span>
-          </label>
-          <input
+        </AdminField>
+        <AdminField label="Buscar huésped o DNI" htmlFor="q">
+          <AdminInput
             id="q"
             name="q"
             type="text"
             placeholder="perez / 32456778"
             defaultValue={q}
-            className={inputClasses}
           />
-        </div>
+        </AdminField>
         <div className="flex items-end gap-2">
-          <button
-            type="submit"
-            className="rounded-sm border border-ink bg-canvas px-4 py-2 text-button-sm font-medium text-ink hover:bg-surface-soft"
-          >
+          <Button type="submit" variant="secondary">
             Filtrar
-          </button>
-          <Link
-            href="/admin/reservas"
-            className="px-2 py-2 text-button-sm text-muted underline-offset-2 hover:underline"
-          >
-            Limpiar
-          </Link>
+          </Button>
+          <Button asChild variant="tertiary">
+            <Link href="/admin/reservas">Limpiar</Link>
+          </Button>
         </div>
       </form>
 
       {bookings.length === 0 ? (
-        <div className="rounded-md border border-hairline bg-surface-soft p-6 text-body-md text-body">
+        <AdminEmptyState>
           {hasFilters
             ? "No hay reservas que coincidan con los filtros."
             : "Todavía no hay reservas cargadas. Creá la primera con el botón Nueva reserva o haciendo clic en un día del Calendario."}
-        </div>
+        </AdminEmptyState>
       ) : (
-        <table className="w-full rounded-md border border-hairline bg-canvas">
-          <thead>
-            <tr className="bg-surface-soft text-left">
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Propiedad</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Huésped</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">DNI</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Noches</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Seña</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pago</th>
-              <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map((booking) => (
-              <tr key={booking.id}>
-                <td className={`${tableCellClasses} text-ink`}>{booking.property.title}</td>
-                <td className={tableCellClasses}>
-                  {booking.guest.firstName} {booking.guest.lastName}
-                </td>
-                <td className={tableCellClasses}>{booking.guest.dni}</td>
-                <td className={tableCellClasses}>{formatInTz(booking.checkIn)}</td>
-                <td className={tableCellClasses}>{formatInTz(booking.checkOut)}</td>
-                <td className={`${tableCellClasses} text-ink`}>
-                  {stayNights(booking.checkIn, booking.checkOut)}
-                </td>
-                <td className={`${tableCellClasses} whitespace-nowrap`}>
-                  {formatMoney(Number(booking.pricePerNight))}
-                </td>
-                <td className={`${tableCellClasses} whitespace-nowrap`}>
-                  {Number(booking.depositAmount) > 0
-                    ? formatMoney(Number(booking.depositAmount))
-                    : "—"}
-                </td>
-                <td className={tableCellClasses}>
-                  {booking.paymentType === "TRANSFERENCIA"
-                    ? `Transferencia${booking.transferRecipient ? ` · ${booking.transferRecipient.name}` : ""}`
-                    : "Efectivo"}
-                </td>
-                <td className={tableCellClasses}>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/admin/propiedades/${booking.propertyId}/agenda?reserva=${booking.id}`}
-                      className="text-button-sm text-ink underline-offset-2 hover:underline"
-                    >
-                      Editar
-                    </Link>
-                    <form action={deleteBooking}>
-                      <input type="hidden" name="id" value={booking.id} />
-                      <input type="hidden" name="redirectTo" value="/admin/reservas" />
-                      <ConfirmButton />
-                    </form>
-                  </div>
-                </td>
+        <AdminPanel>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-surface-soft text-left">
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Propiedad</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Huésped</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">DNI</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Noches</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Seña</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pago</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {bookings.map((booking) => (
+                <tr key={booking.id}>
+                  <td className={`${tableCellClasses} text-ink`}>{booking.property.title}</td>
+                  <td className={tableCellClasses}>
+                    {booking.guest.firstName} {booking.guest.lastName}
+                  </td>
+                  <td className={tableCellClasses}>{booking.guest.dni}</td>
+                  <td className={tableCellClasses}>{formatInTz(booking.checkIn)}</td>
+                  <td className={tableCellClasses}>{formatInTz(booking.checkOut)}</td>
+                  <td className={`${tableCellClasses} text-ink`}>
+                    {stayNights(booking.checkIn, booking.checkOut)}
+                  </td>
+                  <td className={`${tableCellClasses} whitespace-nowrap`}>
+                    {formatMoney(Number(booking.pricePerNight))}
+                  </td>
+                  <td className={`${tableCellClasses} whitespace-nowrap`}>
+                    {Number(booking.depositAmount) > 0
+                      ? formatMoney(Number(booking.depositAmount))
+                      : "—"}
+                  </td>
+                  <td className={tableCellClasses}>
+                    {booking.paymentType === "TRANSFERENCIA"
+                      ? `Transferencia${booking.transferRecipient ? ` · ${booking.transferRecipient.name}` : ""}`
+                      : "Efectivo"}
+                  </td>
+                  <td className={tableCellClasses}>
+                    <div className="flex items-center gap-2">
+                      <Button asChild variant="tertiary">
+                        <Link
+                          href={`/admin/propiedades/${booking.propertyId}/agenda?reserva=${booking.id}`}
+                        >
+                          Editar
+                        </Link>
+                      </Button>
+                      <form action={deleteBooking}>
+                        <input type="hidden" name="id" value={booking.id} />
+                        <input type="hidden" name="redirectTo" value="/admin/reservas" />
+                        <ConfirmButton />
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </AdminPanel>
       )}
     </div>
   );

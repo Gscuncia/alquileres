@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { Button } from "@/components/design-system";
 
 interface SignInFormProps {
   callbackUrl: string;
@@ -46,7 +47,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
           <div>
             <label
               htmlFor="email"
-              className="block text-caption font-medium text-ink"
+              className="block text-caption-sm font-medium text-ink"
             >
               Correo electrónico
             </label>
@@ -58,13 +59,13 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-sm border border-hairline bg-canvas px-3 py-3 text-body-md text-ink outline-none focus:border-ink"
+              className="mt-1 w-full rounded-sm border border-hairline bg-canvas px-3 py-3 text-body-md text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary"
             />
           </div>
           <div>
             <label
               htmlFor="password"
-              className="block text-caption font-medium text-ink"
+              className="block text-caption-sm font-medium text-ink"
             >
               Contraseña
             </label>
@@ -76,15 +77,12 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-sm border border-hairline bg-canvas px-3 py-3 text-body-md text-ink outline-none focus:border-ink"
+              className="mt-1 w-full rounded-sm border border-hairline bg-canvas px-3 py-3 text-body-md text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary"
             />
           </div>
-          <button
-            type="submit"
-            className="w-full rounded-sm bg-primary py-3.5 text-button-md font-medium text-on-primary transition-colors hover:bg-primary-active"
-          >
+          <Button type="submit" block>
             Ingresar
-          </button>
+          </Button>
         </form>
       </div>
     </main>

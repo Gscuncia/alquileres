@@ -116,10 +116,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Pure bar builder (exported for tests): every event paints ONE small
- * colored rectangle per covered BA calendar day — from the check-in day
- * through the check-out day inclusive — so a stay reads as a continuous
- * strip of per-day rectangles in its property's palette color. Overlapping
- * stays (back-to-back on the same day) each contribute their own bar.
+ * colored rectangle per INTERMEDIATE BA calendar day — strictly between
+ * the check-in day and the check-out day (endpoints excluded, the arrow
+ * chips already represent the stay there) — so a stay reads as a
+ * continuous strip of per-day rectangles in its property's palette color
+ * without duplicating the check-in/check-out days. Overlapping stays
+ * (back-to-back on the same day) each contribute their own bar.
  */
 export function buildDayBars(
   events: CalendarEvent[],
@@ -137,8 +139,14 @@ export function buildDayBars(
     const paletteIndex = paletteIndexFor(properties, event.property.id);
     const label = `${event.guest.firstName} ${event.guest.lastName} · ${event.property.title}`;
 
-    let cursor = toUtc(toDateStr(event.checkIn), "00:00");
-    const lastDay = toUtc(toDateStr(event.checkOut), "00:00");
+    // Start the day AFTER the check-in day; stop the day BEFORE the
+    // check-out day — endpoints are covered by the arrow chips.
+    let cursor = new Date(
+      toUtc(toDateStr(event.checkIn), "00:00").getTime() + DAY_MS,
+    );
+    const lastDay = new Date(
+      toUtc(toDateStr(event.checkOut), "00:00").getTime() - DAY_MS,
+    );
     while (cursor.getTime() <= lastDay.getTime()) {
       push(toDateStr(cursor), { bookingId: event.id, paletteIndex, label });
       cursor = new Date(cursor.getTime() + DAY_MS);
@@ -268,10 +276,11 @@ function MonthBookingsList({
  * Server-rendered month grid with stay chips and per-day color bars:
  * `→ HH:mm Nombre` on the check-in BA day, `← HH:mm Nombre` on the
  * check-out day, at most 2 chips per cell before the "+n más" day link.
- * Every day of a stay (check-in through check-out day) carries a small
- * colored rectangle per booking in the occupying property's palette color
- * (`single` mode uses the accent; `todas` uses the per-property palette
- * plus a legend), so overlapping stays stay visually distinguishable.
+ * Every INTERMEDIATE day of a stay (endpoints excluded — the arrow chips
+ * already mark them) carries a small colored rectangle per booking in the
+ * occupying property's palette color (`single` mode uses the accent;
+ * `todas` uses the per-property palette plus a legend), so overlapping
+ * stays stay visually distinguishable without duplication.
  */
 export function CalendarGrid({
   month,

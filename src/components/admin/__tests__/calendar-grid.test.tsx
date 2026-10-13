@@ -213,7 +213,7 @@ describe("CalendarGrid", () => {
     expect(legend).toHaveTextContent("Chalet");
   });
 
-  it("single mode paints a small accent bar on every day of the stay", () => {
+  it("single mode paints a small accent bar on intermediate days only", () => {
     const { container } = render(
       <CalendarGrid
         month="2026-10"
@@ -234,12 +234,14 @@ describe("CalendarGrid", () => {
     const barOf = (day: number): HTMLElement | null =>
       cellOf(day).querySelector("a.h-2") as HTMLElement | null;
 
-    // Stay Oct 10 12:00 → Oct 13 10:00: a bar on the whole period
-    // (check-in day, intermediate nights, check-out day).
-    for (const day of [10, 11, 12, 13]) {
+    // Stay Oct 10 12:00 → Oct 13 10:00: bars ONLY on the intermediate days
+    // 11 and 12 — the arrow chips already mark the 10 and 13 endpoints.
+    for (const day of [11, 12]) {
       expect(barOf(day)).not.toBeNull();
       expect(barOf(day)?.className).toContain("bg-sky");
     }
+    expect(barOf(10)).toBeNull();
+    expect(barOf(13)).toBeNull();
     expect(barOf(9)).toBeNull();
     expect(barOf(14)).toBeNull();
     // Chips carry the accent color in single mode.
@@ -250,7 +252,7 @@ describe("CalendarGrid", () => {
     ).toBe(true);
   });
 
-  it("todas mode bars use the property's palette color across the whole stay", () => {
+  it("todas mode bars use the property's palette color on intermediate days", () => {
     const { container } = render(
       <CalendarGrid
         month="2026-10"
@@ -269,41 +271,46 @@ describe("CalendarGrid", () => {
     const barOf = (day: number): HTMLElement | null =>
       cellOf(day).querySelector("a.h-2") as HTMLElement | null;
 
-    // Casita is palette slot 1 → its bars cover days 10..13.
-    for (const day of [10, 11, 12, 13]) {
+    // Casita is palette slot 1 → its bars cover days 11..12 only.
+    for (const day of [11, 12]) {
       expect(barOf(day)?.className).toContain(CHIP_PALETTE[1]);
     }
-    expect(barOf(9)).toBeNull();
-    expect(barOf(14)).toBeNull();
+    expect(barOf(10)).toBeNull();
+    expect(barOf(13)).toBeNull();
   });
 
-  it("buildDayBars keeps one bar per booking per day, including back-to-back days", () => {
+  it("buildDayBars keeps one bar per booking per intermediate day; endpoints stay chip-only", () => {
     const stayA = event({
       id: "b-a",
       checkIn: toUtc("2026-10-08", "12:00"),
-      checkOut: toUtc("2026-10-10", "10:00"),
+      checkOut: toUtc("2026-10-11", "10:00"),
     });
     const stayB = event({
       id: "b-b",
       guest: { firstName: "María", lastName: "López" },
-      checkIn: toUtc("2026-10-10", "12:00"),
-      checkOut: toUtc("2026-10-12", "10:00"),
+      checkIn: toUtc("2026-10-11", "12:00"),
+      checkOut: toUtc("2026-10-14", "10:00"),
     });
 
     const bars = buildDayBars([stayA, stayB], properties);
 
+    // Endpoints (check-in/check-out days) never carry bars.
+    expect(bars.get("2026-10-08")).toBeUndefined();
+    expect(bars.get("2026-10-11")).toBeUndefined();
+    expect(bars.get("2026-10-14")).toBeUndefined();
+
     // Interior days carry exactly one bar each.
-    expect(bars.get("2026-10-08")).toEqual([
+    expect(bars.get("2026-10-09")).toEqual([
       { bookingId: "b-a", paletteIndex: 0, label: "Juan Pérez · Depto 1" },
     ]);
-    expect(bars.get("2026-10-11")).toEqual([
+    expect(bars.get("2026-10-10")).toEqual([
+      { bookingId: "b-a", paletteIndex: 0, label: "Juan Pérez · Depto 1" },
+    ]);
+    expect(bars.get("2026-10-12")).toEqual([
       { bookingId: "b-b", paletteIndex: 0, label: "María López · Depto 1" },
     ]);
-    // The back-to-back day (Oct 10) carries BOTH bars, one per booking.
-    expect(bars.get("2026-10-10")).toHaveLength(2);
-    expect(bars.get("2026-10-10")?.map((bar) => bar.bookingId)).toEqual([
-      "b-a",
-      "b-b",
+    expect(bars.get("2026-10-13")).toEqual([
+      { bookingId: "b-b", paletteIndex: 0, label: "María López · Depto 1" },
     ]);
   });
 

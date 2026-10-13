@@ -140,7 +140,7 @@ describe("AgendaPage", () => {
     );
   });
 
-  it("paints a small accent bar on every day of the stay", async () => {
+  it("paints a small accent bar on intermediate days only", async () => {
     const { container } = await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
@@ -148,7 +148,8 @@ describe("AgendaPage", () => {
       }),
     );
 
-    // Stay Oct 10 12:00 → Oct 13 10:00 paints bars on Oct 10..13.
+    // Stay Oct 10 12:00 → Oct 13 10:00: bars only on Oct 11..12
+    // (the arrow chips already mark the 10 and 13 endpoints).
     // Oct 1 2026 is a Thursday → Monday-first leading blanks = 3.
     const grid = container.querySelector('[role="grid"]') as HTMLElement;
     const cellOf = (day: number): HTMLElement =>
@@ -157,10 +158,12 @@ describe("AgendaPage", () => {
     const barOf = (day: number): HTMLElement | null =>
       cellOf(day).querySelector("a.h-2") as HTMLElement | null;
 
-    for (const day of [10, 11, 12, 13]) {
+    for (const day of [11, 12]) {
       expect(barOf(day)).not.toBeNull();
       expect(barOf(day)?.className).toContain("bg-sky");
     }
+    expect(barOf(10)).toBeNull();
+    expect(barOf(13)).toBeNull();
     expect(barOf(9)).toBeNull();
     expect(barOf(14)).toBeNull();
   });

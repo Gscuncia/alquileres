@@ -174,8 +174,16 @@ export async function deleteProperty(formData: FormData): Promise<void> {
   try {
     const existing = await prisma.property.findUnique({
       where: { id },
-      select: { slug: true },
+      select: { slug: true, published: true },
     });
+
+    // A published property is live on the public site: the owner must
+    // unpublish it first so the deletion is never an accidental takedown.
+    if (existing?.published) {
+      redirect("/admin/propiedades?error=publicada");
+      // Unreachable in Next (redirect throws); keeps mock-based tests honest.
+      return;
+    }
 
     if (existing) {
       await prisma.property.delete({ where: { id } });

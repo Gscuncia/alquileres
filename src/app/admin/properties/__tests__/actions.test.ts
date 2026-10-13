@@ -245,6 +245,23 @@ describe("property actions", () => {
     );
   });
 
+  it("blocks deleting a published property and never calls delete", async () => {
+    mocks.propertyFindUnique.mockResolvedValue({
+      id: "prop-1",
+      slug: "depto-viejo",
+      published: true,
+    });
+    const formData = buildFormData();
+    formData.append("id", "prop-1");
+
+    await deleteProperty(formData);
+
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/admin/propiedades?error=publicada",
+    );
+    expect(mocks.propertyDelete).not.toHaveBeenCalled();
+  });
+
   it("freshness: after an update + revalidate, a fresh read serves the new content", async () => {
     const formData = buildFormData({
       slug: "depto-viejo",

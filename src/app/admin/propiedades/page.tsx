@@ -18,6 +18,7 @@ export default async function AdminPropertiesPage({
   await requireAdmin();
   const properties = await getAllPropertiesForAdmin();
   const deleteBlocked = searchParams?.error === "eliminar";
+  const deletePublishedBlocked = searchParams?.error === "publicada";
 
   return (
     <div className="space-y-6">
@@ -35,6 +36,16 @@ export default async function AdminPropertiesPage({
         >
           No se puede eliminar la propiedad porque tiene reservas asociadas.
           Eliminá primero sus reservas.
+        </div>
+      )}
+
+      {deletePublishedBlocked && (
+        <div
+          role="alert"
+          className="rounded-sm border border-hairline bg-surface-soft px-4 py-3 text-body-sm text-primary-error-text"
+        >
+          No se puede eliminar una propiedad publicada. Despublicala primero
+          desde el editor (destildá "Publicada") y volvé a intentar.
         </div>
       )}
 
@@ -90,7 +101,15 @@ export default async function AdminPropertiesPage({
                     </Link>
                     <form action={deleteProperty}>
                       <input type="hidden" name="id" value={property.id} />
-                      <ConfirmButton />
+                      <span
+                        title={
+                          property.published
+                            ? "Despublicá la propiedad antes de eliminarla"
+                            : "Eliminar propiedad"
+                        }
+                      >
+                        <ConfirmButton />
+                      </span>
                     </form>
                   </div>
                 </td>

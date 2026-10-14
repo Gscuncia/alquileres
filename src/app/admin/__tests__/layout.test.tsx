@@ -29,6 +29,15 @@ vi.mock("@/components/auth/signout-button", () => ({
   SignOutButton: () => <button type="button">Cerrar sesión</button>,
 }));
 
+vi.mock("@/components/admin/MustChangePasswordModal", () => ({
+  MustChangePasswordModal: () => (
+    <div role="dialog" aria-labelledby="must-change-title">
+      <h2 id="must-change-title">Cambiar contraseña</h2>
+      <p>Es la primera vez que ingresás.</p>
+    </div>
+  ),
+}));
+
 function makeAdminSession() {
   return {
     user: {
@@ -160,7 +169,7 @@ describe("AdminLayout", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/auth/access-denied");
   });
 
-  it("redirects users that must change password to /auth/change-password", async () => {
+  it("renders the forced password-change modal when the user must change password", async () => {
     mockAuth.mockResolvedValue({
       user: {
         id: "user-1",
@@ -173,10 +182,14 @@ describe("AdminLayout", () => {
       },
     });
 
-    await expect(
-      AdminLayout({ children: <div>Dashboard content</div> }),
-    ).rejects.toThrow("NEXT_REDIRECT /auth/change-password");
+    render(await AdminLayout({ children: <div>Dashboard content</div> }));
 
-    expect(mockRedirect).toHaveBeenCalledWith("/auth/change-password");
+    expect(
+      screen.getByRole("dialog", { name: /cambiar contraseña/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/es la primera vez que ingresás/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/dashboard content/i)).not.toBeInTheDocument();
   });
 });

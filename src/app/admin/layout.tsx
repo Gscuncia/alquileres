@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/require-auth";
 import { SignOutButton } from "@/components/auth/signout-button";
 import { AdminNavTabs } from "@/components/admin/AdminNavTabs";
+import { MustChangePasswordModal } from "@/components/admin/MustChangePasswordModal";
 
 export default async function AdminLayout({
   children,
@@ -13,7 +14,11 @@ export default async function AdminLayout({
   const session = await requirePermission();
 
   if (session.user.mustChangePassword === true) {
-    redirect("/auth/change-password");
+    return (
+      <div className="min-h-screen bg-canvas">
+        <MustChangePasswordModal />
+      </div>
+    );
   }
 
   return (

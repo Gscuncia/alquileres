@@ -3,13 +3,6 @@ import authConfig from "@/lib/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const AUTH_PATHS = [
-  "/auth/change-password",
-  "/auth/signin",
-  "/auth/recover",
-  "/auth/reset",
-];
-
 const TAB_ROUTE_PREFIXES = [
   { prefix: "/admin/calendario", tab: "calendario" },
   { prefix: "/admin/propiedades", tab: "propiedades" },
@@ -48,13 +41,6 @@ export default auth((req) => {
   const user = req.auth?.user;
   if (!user) {
     return;
-  }
-
-  // Force a password change before allowing any other admin or protected page.
-  // Auth paths are excluded so the redirect cannot loop.
-  const isAuthPath = AUTH_PATHS.includes(nextUrl.pathname);
-  if (user.mustChangePassword === true && !isAuthPath) {
-    return Response.redirect(new URL("/auth/change-password", nextUrl.origin));
   }
 
   // The remainder of this middleware only governs admin routes.

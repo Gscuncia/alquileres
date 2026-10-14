@@ -40,7 +40,13 @@ export async function requirePermission(tab?: string) {
 
   const allowedTabs = session.user.allowedTabs ?? [];
 
-  if (allowedTabs.length === 0 || (tab && !allowedTabs.includes(tab))) {
+  // A user that must change their password is allowed into the admin shell
+  // so the layout can show the forced password-change modal. After the change
+  // the flag is cleared and the normal tab check applies again.
+  if (
+    session.user.mustChangePassword !== true &&
+    (allowedTabs.length === 0 || (tab && !allowedTabs.includes(tab)))
+  ) {
     redirect("/auth/access-denied");
   }
 

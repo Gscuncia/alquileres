@@ -1,12 +1,24 @@
 "use client";
 
 import { useFormState } from "react-dom";
-import { changePassword } from "@/app/admin/cambiar-contrasena/actions";
+import { changePassword as changePasswordDefault } from "@/app/admin/cambiar-contrasena/actions";
 import { AdminField, AdminInput } from "@/components/admin/primitives";
 import { Button } from "@/components/design-system";
+import type { ActionState } from "@/lib/admin-action-types";
 
-export function AdminChangePasswordForm() {
-  const [state, formAction] = useFormState(changePassword, { ok: false });
+type ChangePasswordAction = (
+  prevState: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
+
+export function AdminChangePasswordForm({
+  action,
+}: {
+  action?: ChangePasswordAction;
+}) {
+  const [state, formAction] = useFormState(action ?? changePasswordDefault, {
+    ok: false,
+  });
 
   return (
     <form action={formAction} className="space-y-4">

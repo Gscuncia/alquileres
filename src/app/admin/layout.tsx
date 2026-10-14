@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/require-auth";
 import { SignOutButton } from "@/components/auth/signout-button";
 import { AdminNavTabs } from "@/components/admin/AdminNavTabs";
 import { MustChangePasswordModal } from "@/components/admin/MustChangePasswordModal";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminLayout({
   children,
@@ -13,7 +14,12 @@ export default async function AdminLayout({
 }>) {
   const session = await requirePermission();
 
-  if (session.user.mustChangePassword === true) {
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { mustChangePassword: true },
+  });
+
+  if (dbUser?.mustChangePassword === true) {
     return (
       <div className="min-h-screen bg-canvas">
         <MustChangePasswordModal />

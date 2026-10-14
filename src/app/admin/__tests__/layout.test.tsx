@@ -1,8 +1,21 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import AdminLayout from "@/app/admin/layout";
 
-const mockAuth = vi.fn();
+const mocks = vi.hoisted(() => ({
+  auth: vi.fn(),
+  userFindUnique: vi.fn(),
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    user: {
+      findUnique: mocks.userFindUnique,
+    },
+  },
+}));
+
+
 const mockUsePathname = vi.fn(() => "/admin");
 const mockRedirect = vi.hoisted(() =>
   vi.fn((path: string) => {
@@ -11,7 +24,7 @@ const mockRedirect = vi.hoisted(() =>
 );
 
 vi.mock("@/lib/auth", () => ({
-  auth: () => mockAuth(),
+  auth: () => mocks.auth(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -61,8 +74,13 @@ function makeAdminSession() {
 }
 
 describe("AdminLayout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.userFindUnique.mockResolvedValue({ mustChangePassword: false });
+  });
+
   it("renders navigation, user info, and logout for an authenticated admin", async () => {
-    mockAuth.mockResolvedValue(makeAdminSession());
+    mocks.auth.mockResolvedValue(makeAdminSession());
 
     render(await AdminLayout({ children: <div>Dashboard content</div> }));
 
@@ -119,7 +137,7 @@ describe("AdminLayout", () => {
   });
 
   it("filters nav tabs for non-admin users based on allowedTabs", async () => {
-    mockAuth.mockResolvedValue({
+    mocks.auth.mockResolvedValue({
       user: {
         id: "user-2",
         email: "operative@alquileresanita.com.ar",
@@ -140,7 +158,7 @@ describe("AdminLayout", () => {
   });
 
   it("redirects unauthenticated users to sign-in", async () => {
-    mockAuth.mockResolvedValue(null);
+    mocks.auth.mockResolvedValue(null);
 
     await expect(
       AdminLayout({ children: <div>Dashboard content</div> }),
@@ -150,7 +168,7 @@ describe("AdminLayout", () => {
   });
 
   it("redirects users with no allowed tabs to access-denied", async () => {
-    mockAuth.mockResolvedValue({
+    mocks.auth.mockResolvedValue({
       user: {
         id: "user-3",
         email: "blocked@alquileresanita.com.ar",
@@ -170,7 +188,8 @@ describe("AdminLayout", () => {
   });
 
   it("renders the forced password-change modal when the user must change password", async () => {
-    mockAuth.mockResolvedValue({
+    mocks.userFindUnique.mockResolvedValue({ mustChangePassword: true });
+    mocks.auth.mockResolvedValue({
       user: {
         id: "user-1",
         email: "admin@alquileresanita.com.ar",

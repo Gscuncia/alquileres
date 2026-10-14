@@ -122,13 +122,13 @@ describe("auth config signIn callback", () => {
     expect(result).toBe(true);
   });
 
-  it("redirects users that must change password to /auth/change-password", async () => {
+  it("returns true even when the user must change password", async () => {
     const result = await authConfig.callbacks?.signIn?.({
       user: { id: "user-1", mustChangePassword: true },
       account: null,
       profile: undefined,
     });
 
-    expect(result).toBe("/auth/change-password");
+    expect(result).toBe(true);
   });
 });

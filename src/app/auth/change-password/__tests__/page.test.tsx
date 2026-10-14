@@ -4,6 +4,15 @@ import { render, screen } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   redirect: vi.fn(),
+  userFindUnique: vi.fn(),
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    user: {
+      findUnique: mocks.userFindUnique,
+    },
+  },
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -26,6 +35,7 @@ import ChangePasswordPage from "@/app/auth/change-password/page";
 describe("ChangePasswordPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.userFindUnique.mockResolvedValue({ mustChangePassword: false });
   });
 
   it("redirects unauthenticated users to sign-in", async () => {
@@ -37,8 +47,9 @@ describe("ChangePasswordPage", () => {
   });
 
   it("redirects users who do not need to change password to /admin", async () => {
+    mocks.userFindUnique.mockResolvedValue({ mustChangePassword: false });
     mocks.auth.mockResolvedValue({
-      user: { id: "user-1", mustChangePassword: false },
+      user: { id: "user-1", mustChangePassword: true },
     });
 
     await expect(ChangePasswordPage()).rejects.toThrow("NEXT_REDIRECT:/admin");
@@ -47,6 +58,7 @@ describe("ChangePasswordPage", () => {
   });
 
   it("renders the change password form for users that must change password", async () => {
+    mocks.userFindUnique.mockResolvedValue({ mustChangePassword: true });
     mocks.auth.mockResolvedValue({
       user: { id: "user-1", mustChangePassword: true },
     });

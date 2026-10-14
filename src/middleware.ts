@@ -48,6 +48,12 @@ export default auth((req) => {
     return;
   }
 
+  // Users that must change their password are allowed into the admin shell
+  // so the layout can show the forced password-change modal.
+  if (user.mustChangePassword === true) {
+    return;
+  }
+
   const isDefaultAdmin = user.isDefaultAdmin === true;
   if (isDefaultAdmin) {
     return;

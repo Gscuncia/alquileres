@@ -158,12 +158,9 @@ describe("middleware", () => {
     expect(middleware(rolesReq)).toBeUndefined();
   });
 
-  it("allows authenticated users that must change password to access /admin so the layout can show the modal", async () => {
+  it("allows authenticated users that must change password to access any /admin route so the layout can show the modal", async () => {
     const middleware = await loadMiddleware();
-    const req = buildRequest(
-      "/admin",
-      makeUser({ mustChangePassword: true, allowedTabs: ["panel", "calendario", "gastos"] }),
-    );
+    const req = buildRequest("/admin/usuarios", makeUser({ mustChangePassword: true, allowedTabs: ["calendario", "gastos"] }));
 
     const res = middleware(req);
 

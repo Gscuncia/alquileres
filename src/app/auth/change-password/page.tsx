@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 
 export default async function ChangePasswordPage() {
@@ -9,7 +10,12 @@ export default async function ChangePasswordPage() {
     redirect("/auth/signin");
   }
 
-  if (session.user.mustChangePassword !== true) {
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { mustChangePassword: true },
+  });
+
+  if (dbUser?.mustChangePassword !== true) {
     redirect("/admin");
   }
 

@@ -30,7 +30,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-canvas">
       <header className="relative sticky top-0 z-10 overflow-hidden border-b border-cream-line bg-header-bg px-4 py-4 shadow-sm md:px-6">
-        <div className="relative mx-auto flex max-w-[1128px] items-center justify-between">
+        <div className="relative mx-auto flex max-w-[1440px] items-center justify-between">
           <div className="flex items-center gap-3 md:gap-4">
             <Link href="/" className="flex shrink-0 items-center">
               <Image
@@ -95,14 +95,14 @@ export default async function AdminLayout({
         </div>
       </header>
       <nav className="border-b border-hairline bg-canvas">
-        <div className="mx-auto max-w-[1128px] px-4 py-3 md:px-6">
+        <div className="mx-auto max-w-[1440px] px-4 py-3 md:px-6">
           <AdminNavTabs
             allowedTabs={session.user.allowedTabs}
             isDefaultAdmin={session.user.isDefaultAdmin}
           />
         </div>
       </nav>
-      <main className="mx-auto max-w-[1128px] px-4 py-8 md:px-6">{children}</main>
+      <main className="mx-auto max-w-[1440px] px-4 py-8 md:px-6">{children}</main>
     </div>
   );
 }

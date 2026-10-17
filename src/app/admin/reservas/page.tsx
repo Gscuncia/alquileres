@@ -21,7 +21,7 @@ interface ReservasPageProps {
   searchParams?: { propiedad?: string; desde?: string; hasta?: string; q?: string };
 }
 
-const tableCellClasses = "border-b border-hairline px-4 py-3 text-body-sm text-body";
+const tableCellClasses = "border-b border-hairline px-3 py-3 text-body-sm text-body";
 
 /** Exclusive upper bound `00:00 (UTC-3)` of the day AFTER the selected date. */
 function endOfDayExclusive(dateStr: string): Date {
@@ -165,16 +165,16 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
           <table className="w-full">
             <thead>
               <tr className="bg-surface-soft text-left">
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Propiedad</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Huésped</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">DNI</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Noches</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Seña</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pago</th>
-                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Propiedad</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Huésped</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">DNI</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Noches</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Seña</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Pago</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
               </tr>
             </thead>
             <tbody>

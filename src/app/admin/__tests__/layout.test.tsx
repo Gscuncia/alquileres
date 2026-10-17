@@ -109,8 +109,8 @@ describe("AdminLayout", () => {
     const main = screen.getByRole("main");
     expect(header).toHaveClass("px-4");
     expect(header).toHaveClass("md:px-6");
-    expect(header.firstChild).toHaveClass("max-w-[1128px]");
-    expect(main).toHaveClass("max-w-[1128px]");
+    expect(header.firstChild).toHaveClass("max-w-[1440px]");
+    expect(main).toHaveClass("max-w-[1440px]");
     expect(main).toHaveClass("px-4");
     expect(main).toHaveClass("md:px-6");
 

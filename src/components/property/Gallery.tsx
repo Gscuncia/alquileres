@@ -10,7 +10,7 @@ export interface GalleryProps {
 export const Gallery: React.FC<GalleryProps> = ({ images, alt }) => {
   const [mainIndex, setMainIndex] = useState(0);
   const mainImage = images[mainIndex] ?? images[0];
-  const thumbnails = images.slice(0, 5);
+  const thumbnails = images.slice(0, 10);
 
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4">
@@ -22,15 +22,15 @@ export const Gallery: React.FC<GalleryProps> = ({ images, alt }) => {
         />
       </div>
 
-      <div className="hidden grid-cols-2 gap-4 md:grid">
-        {thumbnails.slice(1, 5).map((image, index) => (
+      <div className="hidden grid-cols-3 gap-4 md:grid">
+        {thumbnails.slice(1, 10).map((image, index) => (
           <button
             key={image}
             type="button"
             onClick={() => setMainIndex(index + 1)}
             className={`relative aspect-square overflow-hidden rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
-              index === 0 ? "rounded-tr-lg" : ""
-            } ${index === 2 ? "rounded-br-lg" : ""}`}
+              index === 2 ? "rounded-tr-lg" : ""
+            } ${index === 8 ? "rounded-br-lg" : ""}`}
             aria-label={`Ver foto ${index + 2}`}
           >
             <img

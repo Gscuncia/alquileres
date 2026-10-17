@@ -23,21 +23,19 @@ describe("Gallery", () => {
     expect(labels).toContain("Ver foto 10");
   });
 
-  it("shows a back-to-cover button after selecting another photo and resets with it", () => {
+  it("lets the user select the cover photo again from its thumbnail", () => {
     render(<Gallery images={images} alt="Depto 1" />);
 
-    expect(screen.queryByRole("button", { name: /volver a la foto de portada/i })).not.toBeInTheDocument();
-
     fireEvent.click(screen.getAllByRole("button", { name: "Ver foto 2" })[0]);
-    expect(
-      screen.getByRole("button", { name: /volver a la foto de portada/i }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: /volver a la foto de portada/i }),
+    expect(screen.getByRole("img", { name: "Depto 1" })).toHaveAttribute(
+      "src",
+      images[1],
     );
-    expect(
-      screen.queryByRole("button", { name: /volver a la foto de portada/i }),
-    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Ver foto 1" })[0]);
+    expect(screen.getByRole("img", { name: "Depto 1" })).toHaveAttribute(
+      "src",
+      images[0],
+    );
   });
 });

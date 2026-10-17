@@ -20,32 +20,23 @@ export const Gallery: React.FC<GalleryProps> = ({ images, alt }) => {
           alt={alt}
           className="h-full w-full object-cover"
         />
-        {mainIndex !== 0 && (
-          <button
-            type="button"
-            onClick={() => setMainIndex(0)}
-            aria-label="Volver a la foto de portada"
-            className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 text-caption font-medium text-ink backdrop-blur-sm transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-          >
-            ← Portada
-          </button>
-        )}
       </div>
 
-      <div className="hidden grid-cols-3 gap-4 md:grid">
-        {thumbnails.slice(1, 10).map((image, index) => (
+      <div className="hidden grid-cols-3 gap-2 md:grid md:h-full md:auto-rows-fr">
+        {thumbnails.map((image, index) => (
           <button
             key={image}
             type="button"
-            onClick={() => setMainIndex(index + 1)}
-            className={`relative aspect-square overflow-hidden rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
-              index === 2 ? "rounded-tr-lg" : ""
-            } ${index === 8 ? "rounded-br-lg" : ""}`}
-            aria-label={`Ver foto ${index + 2}`}
+            onClick={() => setMainIndex(index)}
+            className={`relative overflow-hidden rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
+              index === mainIndex ? "ring-2 ring-ink" : ""
+            }`}
+            aria-label={`Ver foto ${index + 1}`}
+            aria-current={index === mainIndex ? "true" : undefined}
           >
             <img
               src={image}
-              alt={`${alt} - foto ${index + 2}`}
+              alt={`${alt} - foto ${index + 1}`}
               className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
             />
           </button>

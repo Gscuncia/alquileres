@@ -33,7 +33,7 @@ const dbProperty = {
   bathrooms: 1,
   amenities: ["Wi-Fi", "Cocina equipada"],
   images: [
-    { url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", fit: "cover", position: "center" },
+    { url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", fit: "cover", x: 50, y: 50, zoom: 1 },
   ],
   published: true,
   sortOrder: 1,
@@ -88,7 +88,9 @@ describe("properties-db", () => {
         {
           url: "https://images.unsplash.com/legacy.jpg",
           fit: "cover",
-          position: "center",
+          x: 50,
+          y: 50,
+          zoom: 1,
         },
       ]);
     });

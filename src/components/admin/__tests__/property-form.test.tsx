@@ -97,7 +97,9 @@ describe("PropertyForm", () => {
             {
               url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
               fit: "cover",
-              position: "center",
+              x: 50,
+              y: 50,
+              zoom: 1,
             },
           ],
         }}
@@ -112,7 +114,7 @@ describe("PropertyForm", () => {
     expect(screen.queryByLabelText(/imágenes 1/i)).not.toBeInTheDocument();
   });
 
-  it("renders the framing selects with the stored values in edit mode", () => {
+  it("renders a preview whose style reflects the stored x/y/zoom framing", () => {
     render(
       <PropertyForm
         action={mockAction}
@@ -121,28 +123,154 @@ describe("PropertyForm", () => {
             {
               url: "https://images.unsplash.com/photo-a",
               fit: "contain",
-              position: "top-left",
+              x: 25,
+              y: 75,
+              zoom: 2,
             },
           ],
         }}
       />,
     );
 
-    expect(
-      screen.getByRole("combobox", { name: /encuadre 1/i }),
-    ).toHaveValue("contain");
-    expect(
-      screen.getByRole("combobox", { name: /posición 1/i }),
-    ).toHaveValue("top-left");
+    expect(screen.getByAltText("Vista previa 1")).toHaveStyle({
+      objectFit: "contain",
+      objectPosition: "25% 75%",
+      transform: "scale(2)",
+    });
   });
 
-  it("defaults new image rows to cover/center", () => {
-    render(<PropertyForm action={mockAction} />);
+  it("omits the transform when zoom is untouched and skips the preview without a URL", () => {
+    render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-a",
+              fit: "cover",
+              x: 50,
+              y: 50,
+              zoom: 1,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByAltText("Vista previa 1")).not.toHaveStyle({ transform: "scale(1)" });
+  });
+
+  it("carries the aligned hidden fields with the stored values", () => {
+    const { container } = render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-a",
+              fit: "contain",
+              x: 10,
+              y: 90,
+              zoom: 1.5,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(container.querySelector('input[name="imageFit"]')).toHaveValue("contain");
+    expect(container.querySelector('input[name="imageX"]')).toHaveValue("10");
+    expect(container.querySelector('input[name="imageY"]')).toHaveValue("90");
+    expect(container.querySelector('input[name="imageZoom"]')).toHaveValue("1.5");
+  });
+
+  it("switches the fit through the quick toggle and updates the hidden field", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-a",
+              fit: "cover",
+              x: 50,
+              y: 50,
+              zoom: 1,
+            },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /mostrar completa/i }));
+    expect(container.querySelector('input[name="imageFit"]')).toHaveValue("contain");
+    expect(screen.getByRole("button", { name: /llenar el cuadro/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /llenar el cuadro/i }));
+    expect(container.querySelector('input[name="imageFit"]')).toHaveValue("cover");
+  });
+
+  it("centers the framing and resets the zoom with the reset button", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-a",
+              fit: "cover",
+              x: 10,
+              y: 90,
+              zoom: 2.5,
+            },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /centrar/i }));
+    expect(container.querySelector('input[name="imageX"]')).toHaveValue("50");
+    expect(container.querySelector('input[name="imageY"]')).toHaveValue("50");
+    expect(container.querySelector('input[name="imageZoom"]')).toHaveValue("1");
+  });
+
+  it("submits the zoom slider as a numeric value in the hidden-aligned field", () => {
+    const { container } = render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-a",
+              fit: "cover",
+              x: 50,
+              y: 50,
+              zoom: 1,
+            },
+          ],
+        }}
+      />,
+    );
+
+    const slider = screen.getByRole("slider", { name: /tamaño de la foto/i });
+    fireEvent.change(slider, { target: { value: "1.75" } });
+
+    expect(container.querySelector('input[name="imageZoom"]')).toHaveValue("1.75");
+    expect(slider).toHaveValue("1.75");
+  });
+
+  it("defaults new image rows to cover/center/zoom 1", () => {
+    const { container } = render(<PropertyForm action={mockAction} />);
 
     fireEvent.click(screen.getByRole("button", { name: /agregar imagen/i }));
 
-    expect(screen.getByRole("combobox", { name: /encuadre 1/i })).toHaveValue("cover");
-    expect(screen.getByRole("combobox", { name: /posición 1/i })).toHaveValue("center");
+    expect(container.querySelector('input[name="imageFit"]')).toHaveValue("cover");
+    expect(container.querySelector('input[name="imageX"]')).toHaveValue("50");
+    expect(container.querySelector('input[name="imageY"]')).toHaveValue("50");
+    expect(container.querySelector('input[name="imageZoom"]')).toHaveValue("1");
+    expect(screen.getByText(/pegá una url para ver la vista previa/i)).toBeInTheDocument();
   });
 
   it("converts a pasted raw Drive link to the direct thumbnail URL", () => {

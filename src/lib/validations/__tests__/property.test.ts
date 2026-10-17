@@ -15,7 +15,9 @@ const validProperty = {
     {
       url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
       fit: "cover",
-      position: "center",
+      x: 50,
+      y: 50,
+      zoom: 1,
     },
   ],
   sortOrder: 1,
@@ -74,7 +76,7 @@ describe("propertySchema", () => {
   it("rejects a non-URL image naming the field", () => {
     const result = propertySchema.safeParse({
       ...validProperty,
-      images: [{ url: "not-a-url", fit: "cover", position: "center" }],
+      images: [{ url: "not-a-url", fit: "cover", x: 50, y: 50, zoom: 1 }],
     });
 
     expect(result.success).toBe(false);
@@ -90,7 +92,7 @@ describe("propertySchema", () => {
   it("rejects an image whose scheme is not http/https", () => {
     const result = propertySchema.safeParse({
       ...validProperty,
-      images: [{ url: "ftp://images.example.com/photo.jpg", fit: "cover", position: "center" }],
+      images: [{ url: "ftp://images.example.com/photo.jpg", fit: "cover", x: 50, y: 50, zoom: 1 }],
     });
 
     expect(result.success).toBe(false);
@@ -165,7 +167,7 @@ describe("propertySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("defaults fit and position when they are missing", () => {
+  it("defaults fit, focus and zoom when they are missing", () => {
     const result = propertySchema.safeParse({
       ...validProperty,
       images: [{ url: "https://images.unsplash.com/photo-1" }],
@@ -176,15 +178,20 @@ describe("propertySchema", () => {
       expect(result.data.images?.[0]).toEqual({
         url: "https://images.unsplash.com/photo-1",
         fit: "cover",
-        position: "center",
+        x: 50,
+        y: 50,
+        zoom: 1,
       });
     }
   });
 
-  it("rejects an invalid fit or position naming the field", () => {
+  it("rejects an out-of-range focus or zoom naming the field", () => {
     const result = propertySchema.safeParse({
       ...validProperty,
-      images: [{ url: "https://images.unsplash.com/photo-1", fit: "stretch", position: "diagonal" }],
+      images: [
+        { url: "https://images.unsplash.com/photo-1", x: 150 },
+        { url: "https://images.unsplash.com/photo-2", zoom: 0 },
+      ],
     });
 
     expect(result.success).toBe(false);

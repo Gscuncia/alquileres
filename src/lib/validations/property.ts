@@ -75,19 +75,9 @@ export const propertySchema = z.object({
       z.object({
         url: httpUrl,
         fit: z.enum(["cover", "contain"]).default("cover"),
-        position: z
-          .enum([
-            "top-left",
-            "top",
-            "top-right",
-            "left",
-            "center",
-            "right",
-            "bottom-left",
-            "bottom",
-            "bottom-right",
-          ])
-          .default("center"),
+        x: z.number().min(0).max(100).default(50),
+        y: z.number().min(0).max(100).default(50),
+        zoom: z.number().min(0.5).max(3).default(1),
       }),
     )
     .optional(),

@@ -73,9 +73,9 @@ export async function seedAdmin(prisma: PrismaClient) {
 }
 
 // Unsplash URLs are whitelisted in next.config.mjs (images.unsplash.com only).
-/** Legacy-compatible framing wrapper: every seeded image frames as cover/center. */
+/** Canonical framing wrapper: every seeded image frames as cover/center. */
 function framedImage(url: string) {
-  return { url, fit: "cover", position: "center" };
+  return { url, fit: "cover", x: 50, y: 50, zoom: 1 };
 }
 
 export async function seedProperties(prisma: PrismaClient) {

@@ -71,7 +71,9 @@ function buildFormData(overrides: Record<string, string> = {}): FormData {
     "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
   );
   data.append("imageFit", "cover");
-  data.append("imagePosition", "center");
+  data.append("imageX", "50");
+  data.append("imageY", "50");
+  data.append("imageZoom", "1");
   return data;
 }
 
@@ -128,7 +130,9 @@ describe("property actions", () => {
           {
             url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
             fit: "cover",
-            position: "center",
+            x: 50,
+            y: 50,
+            zoom: 1,
           },
         ],
       }),
@@ -157,24 +161,32 @@ describe("property actions", () => {
           {
             url: "https://drive.google.com/thumbnail?id=1AbC_dEf-1234567890&sz=w1200",
             fit: "cover",
-            position: "center",
+            x: 50,
+            y: 50,
+            zoom: 1,
           },
         ],
       }),
     });
   });
 
-  it("zips url/fit/position triples by index and applies framing", async () => {
+  it("zips url/fit/x/y/zoom lists by index and applies framing", async () => {
     const formData = buildFormData();
     formData.delete("images");
     formData.delete("imageFit");
-    formData.delete("imagePosition");
+    formData.delete("imageX");
+    formData.delete("imageY");
+    formData.delete("imageZoom");
     formData.append("images", "https://images.example/a.jpg");
     formData.append("imageFit", "contain");
-    formData.append("imagePosition", "top-left");
+    formData.append("imageX", "10");
+    formData.append("imageY", "90");
+    formData.append("imageZoom", "1.5");
     formData.append("images", "https://images.example/b.jpg");
     formData.append("imageFit", "cover");
-    formData.append("imagePosition", "bottom-right");
+    formData.append("imageX", "100");
+    formData.append("imageY", "0");
+    formData.append("imageZoom", "2");
 
     const result = await createProperty(initialState, formData);
 
@@ -182,24 +194,30 @@ describe("property actions", () => {
     expect(mocks.propertyCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         images: [
-          { url: "https://images.example/a.jpg", fit: "contain", position: "top-left" },
-          { url: "https://images.example/b.jpg", fit: "cover", position: "bottom-right" },
+          { url: "https://images.example/a.jpg", fit: "contain", x: 10, y: 90, zoom: 1.5 },
+          { url: "https://images.example/b.jpg", fit: "cover", x: 100, y: 0, zoom: 2 },
         ],
       }),
     });
   });
 
-  it("drops rows with an empty URL and falls back to zod defaults on malformed fit/position", async () => {
+  it("drops rows with an empty URL and falls back to zod defaults on malformed values", async () => {
     const formData = buildFormData();
     formData.delete("images");
     formData.delete("imageFit");
-    formData.delete("imagePosition");
+    formData.delete("imageX");
+    formData.delete("imageY");
+    formData.delete("imageZoom");
     formData.append("images", "");
     formData.append("imageFit", "cover");
-    formData.append("imagePosition", "center");
+    formData.append("imageX", "50");
+    formData.append("imageY", "50");
+    formData.append("imageZoom", "1");
     formData.append("images", "https://images.example/b.jpg");
     formData.append("imageFit", "stretch");
-    formData.append("imagePosition", "diagonal");
+    formData.append("imageX", "abc");
+    formData.append("imageY", "");
+    formData.append("imageZoom", "not-a-number");
 
     const result = await createProperty(initialState, formData);
 
@@ -207,7 +225,25 @@ describe("property actions", () => {
     expect(mocks.propertyCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         images: [
-          { url: "https://images.example/b.jpg", fit: "cover", position: "center" },
+          { url: "https://images.example/b.jpg", fit: "cover", x: 50, y: 50, zoom: 1 },
+        ],
+      }),
+    });
+  });
+
+  it("clamps out-of-range x/y/zoom before validation", async () => {
+    const formData = buildFormData();
+    formData.set("imageX", "-20");
+    formData.set("imageY", "180");
+    formData.set("imageZoom", "9");
+
+    const result = await createProperty(initialState, formData);
+
+    expect(result.ok).toBe(true);
+    expect(mocks.propertyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        images: [
+          expect.objectContaining({ x: 0, y: 100, zoom: 3 }),
         ],
       }),
     });
@@ -371,7 +407,9 @@ describe("property actions", () => {
         {
           url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
           fit: "cover",
-          position: "center",
+          x: 50,
+          y: 50,
+          zoom: 1,
         },
       ],
       sortOrder: 5,

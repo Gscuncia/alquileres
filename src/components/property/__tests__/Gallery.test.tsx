@@ -8,7 +8,9 @@ const images: PropertyImage[] = Array.from(
   (_, i): PropertyImage => ({
     url: `https://img.example/${i}.jpg`,
     fit: "cover",
-    position: "center",
+    x: 50,
+    y: 50,
+    zoom: 1,
   }),
 );
 
@@ -49,8 +51,8 @@ describe("Gallery", () => {
 
   it("applies the framing style to the main image and thumbnails", () => {
     const framed: PropertyImage[] = [
-      { url: "https://img.example/main.jpg", fit: "contain", position: "top" },
-      { url: "https://img.example/thumb.jpg", fit: "cover", position: "bottom-right" },
+      { url: "https://img.example/main.jpg", fit: "contain", x: 50, y: 0, zoom: 1 },
+      { url: "https://img.example/thumb.jpg", fit: "cover", x: 100, y: 100, zoom: 1 },
       ...images.slice(2),
     ];
     render(<Gallery images={framed} alt="Depto 1" />);

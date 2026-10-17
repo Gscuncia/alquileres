@@ -13,9 +13,7 @@ import {
 } from "@/lib/admin-action-types";
 import {
   IMAGE_FITS,
-  IMAGE_POSITIONS,
   type ImageFit,
-  type ImagePosition,
 } from "@/lib/image-framing";
 
 /**
@@ -23,12 +21,13 @@ import {
  * ordered from the dynamic list editors; numeric fields arrive as strings
  * and are coerced so the zod schema can validate them as numbers.
  *
- * Images arrive as three parallel lists (`images`, `imageFit`,
- * `imagePosition`), one entry per row in DOM order, zipped by index here.
- * Rows with an empty URL (after trim + Drive conversion) are dropped after
- * the zip so list alignment never desyncs. Invalid/missing fit/position
- * values become `undefined` so the zod defaults apply: we never pass an
- * invalid enum string down.
+ * Images arrive as five parallel lists (`images`, `imageFit`, `imageX`,
+ * `imageY`, `imageZoom`), one entry per row in DOM order, zipped by index
+ * here. Rows with an empty URL (after trim + Drive conversion) are dropped
+ * after the zip so list alignment never desyncs. Invalid/missing fit values
+ * become `undefined` so the zod defaults apply; malformed x/y/zoom values
+ * become `undefined` too (defaults 50/50/1) and valid ones are clamped to
+ * their zod-accepted ranges before validation.
  */
 function buildPropertyInput(formData: FormData) {
   const text = (key: string): string => {
@@ -52,10 +51,18 @@ function buildPropertyInput(formData: FormData) {
       ? (value as ImageFit)
       : undefined;
 
-  const parsePosition = (value: string | undefined): ImagePosition | undefined =>
-    (IMAGE_POSITIONS as readonly string[]).includes(value ?? "")
-      ? (value as ImagePosition)
-      : undefined;
+  /** Number or undefined on empty/NaN; then clamped to [min, max]. */
+  const parseNumber = (
+    value: string | undefined,
+    min: number,
+    max: number,
+  ): number | undefined => {
+    if (value === undefined || value === "") return undefined;
+    const parsed = Number(value);
+    return Number.isNaN(parsed)
+      ? undefined
+      : Math.min(max, Math.max(min, parsed));
+  };
 
   const number = (key: string): number | undefined => {
     const raw = text(key).trim();
@@ -71,13 +78,17 @@ function buildPropertyInput(formData: FormData) {
 
   const urls = strings("images").map(toDirectDriveUrl);
   const fits = strings("imageFit");
-  const positions = strings("imagePosition");
+  const xs = strings("imageX");
+  const ys = strings("imageY");
+  const zooms = strings("imageZoom");
 
   const images = urls
     .map((url, index) => ({
       url,
       fit: parseFit(fits[index]),
-      position: parsePosition(positions[index]),
+      x: parseNumber(xs[index], 0, 100),
+      y: parseNumber(ys[index], 0, 100),
+      zoom: parseNumber(zooms[index], 0.5, 3),
     }))
     .filter((row) => row.url.length > 0);
 

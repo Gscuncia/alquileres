@@ -160,12 +160,14 @@ describe("prisma seed", () => {
       expect(call[0].create.images.length).toBeGreaterThanOrEqual(2);
       expect(call[0].create.images.length).toBeLessThanOrEqual(3);
       call[0].create.images.forEach(
-        (entry: { url: string; fit: string; position: string }) => {
+        (entry: { url: string; fit: string; x: number; y: number; zoom: number }) => {
           expect(entry.url).toMatch(
             /^https:\/\/images\.unsplash\.com\/photo-[\w-]+/,
           );
           expect(entry.fit).toBe("cover");
-          expect(entry.position).toBe("center");
+          expect(entry.x).toBe(50);
+          expect(entry.y).toBe(50);
+          expect(entry.zoom).toBe(1);
         },
       );
     });

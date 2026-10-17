@@ -20,6 +20,16 @@ export const Gallery: React.FC<GalleryProps> = ({ images, alt }) => {
           alt={alt}
           className="h-full w-full object-cover"
         />
+        {mainIndex !== 0 && (
+          <button
+            type="button"
+            onClick={() => setMainIndex(0)}
+            aria-label="Volver a la foto de portada"
+            className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 text-caption font-medium text-ink backdrop-blur-sm transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+          >
+            ← Portada
+          </button>
+        )}
       </div>
 
       <div className="hidden grid-cols-3 gap-4 md:grid">

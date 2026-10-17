@@ -137,49 +137,34 @@ describe("imageStyle", () => {
     fit: PropertyImage["fit"] = "cover",
   ) => imageStyle({ url: URL_A, fit, x: 50, y: 50, zoom: 1, ...framing });
 
-  it("anchors the element so the focal point sits at (x%, y%) of the box", () => {
-    expect(styleFor({ x: 0, y: 0 })).toEqual({
-      position: "absolute",
-      left: "0%",
-      top: "0%",
-      width: "100%",
-      height: "100%",
-      transform: "translate(-0%, -0%)",
+  it("maps x/y to objectPosition percentages", () => {
+    expect(styleFor({ x: 0, y: 0 }).objectPosition).toBe("0% 0%");
+    expect(styleFor({ x: 100, y: 100 }).objectPosition).toBe("100% 100%");
+    expect(styleFor().objectPosition).toBe("50% 50%");
+  });
+
+  it("zooms with a scale transform anchored at the focal point", () => {
+    expect(styleFor({ zoom: 2, x: 30, y: 40 })).toEqual({
+      objectFit: "cover",
+      objectPosition: "30% 40%",
+      transform: "scale(2)",
+      transformOrigin: "30% 40%",
+    });
+  });
+
+  it("applies no transform at zoom 1 (including clamped legacy zoom < 1)", () => {
+    expect(styleFor({ zoom: 1 })).toEqual({
       objectFit: "cover",
       objectPosition: "50% 50%",
     });
-    expect(styleFor({ x: 75, y: 25 })).toMatchObject({
-      left: "75%",
-      top: "25%",
-      transform: "translate(-75%, -25%)",
-    });
-  });
-
-  it("oversizes the element by zoom so the box always stays covered", () => {
-    expect(styleFor({ zoom: 2 })).toMatchObject({
-      width: "200%",
-      height: "200%",
+    expect(styleFor({ zoom: 0.5 })).toEqual({
       objectFit: "cover",
-    });
-    expect(styleFor({ zoom: 1 })).toMatchObject({
-      width: "100%",
-      height: "100%",
-    });
-    // Legacy stored zooms below 1 clamp up so the box never underfills.
-    expect(styleFor({ zoom: 0.5 })).toMatchObject({
-      width: "100%",
-      height: "100%",
+      objectPosition: "50% 50%",
     });
   });
 
-  it("renders contain as a fully visible, centered element", () => {
+  it("applies contain as objectFit", () => {
     expect(styleFor({}, "contain")).toEqual({
-      position: "absolute",
-      left: "50%",
-      top: "50%",
-      width: "100%",
-      height: "100%",
-      transform: "translate(-50%, -50%)",
       objectFit: "contain",
       objectPosition: "50% 50%",
     });

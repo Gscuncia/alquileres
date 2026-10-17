@@ -106,38 +106,25 @@ export function normalizeImages(raw: unknown): PropertyImage[] {
 }
 
 /**
- * React style for an <img> that must sit inside a positioned (`relative`)
- * overflow-hidden box. The image element is oversized by the zoom factor and
- * anchored so the stored focal point (x%, y%) sits at the same point of the
- * visible box. Rendering through element geometry (left/top plus a
- * translate(-x, -y)) pans at ANY zoom and for ANY image aspect; plain
- * object-position only pans along the axes where the fixed cover layout has
- * slack, which is why pans appeared frozen after zooming. With zoom >= 1 the
- * element always fully covers the box.
+ * React style for an <img>. Pan is driven by object-position plus a
+ * transform-zoom anchored at the stored focal point (x%, y%). At zoom 1
+ * object-position pans the axis where the fixed cover layout has slack;
+ * at zoom > 1 the scale magnifies the content around the matching
+ * transform-origin, which pans BOTH axes of the magnified crop. The frame
+ * always stays fully covered because the scale is applied on top of a
+ * cover baseline.
  */
 export function imageStyle(image: PropertyImage): CSSProperties {
   const zoomScale = Math.max(image.zoom, 1);
-  const anchor = {
-    position: "absolute" as const,
-    left: `${image.x}%`,
-    top: `${image.y}%`,
-    transform: `translate(-${image.x}%, -${image.y}%)`,
-    objectPosition: "50% 50%",
+  const style: CSSProperties = {
+    objectFit: image.fit,
+    objectPosition: `${image.x}% ${image.y}%`,
   };
 
-  if (image.fit === "contain") {
-    return {
-      ...anchor,
-      width: "100%",
-      height: "100%",
-      objectFit: "contain",
-    };
+  if (zoomScale !== 1) {
+    style.transform = `scale(${zoomScale})`;
+    style.transformOrigin = `${image.x}% ${image.y}%`;
   }
 
-  return {
-    ...anchor,
-    width: `${zoomScale * 100}%`,
-    height: `${zoomScale * 100}%`,
-    objectFit: "cover",
-  };
+  return style;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const formState = vi.hoisted(() => ({
@@ -104,6 +104,27 @@ describe("PropertyForm", () => {
 
     await user.click(screen.getByRole("button", { name: /quitar fila 1 de imágenes/i }));
     expect(screen.queryByLabelText(/imágenes 1/i)).not.toBeInTheDocument();
+  });
+
+  it("converts a pasted raw Drive link to the direct thumbnail URL", () => {
+    render(<PropertyForm action={mockAction} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /agregar imagen/i }));
+    const imageRow = screen.getByLabelText(/imágenes 1/i);
+
+    // fireEvent.change mirrors a paste: the normalizer sees the full URL at
+    // once (char-by-char typing would convert as soon as the partial id
+    // reaches 10 chars and desync the rest of the keystrokes).
+    fireEvent.change(imageRow, {
+      target: {
+        value:
+          "https://drive.google.com/file/d/1AbC_dEf-1234567890/view?usp=sharing",
+      },
+    });
+
+    expect(imageRow).toHaveValue(
+      "https://drive.google.com/thumbnail?id=1AbC_dEf-1234567890&sz=w1200",
+    );
   });
 
   it("shows the success banner when the action succeeds", () => {

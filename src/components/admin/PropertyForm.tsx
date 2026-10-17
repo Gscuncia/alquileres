@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
+import { toDirectDriveUrl } from "@/lib/drive-url";
 import { Button } from "@/components/design-system";
 import {
   AdminField,
@@ -289,7 +290,9 @@ export function PropertyForm({
         rows={images}
         type="url"
         onChange={(index, value) =>
-          setImages((rows) => rows.map((row, i) => (i === index ? value : row)))
+          setImages((rows) =>
+            rows.map((row, i) => (i === index ? toDirectDriveUrl(value) : row)),
+          )
         }
         onAdd={() => setImages((rows) => [...rows, ""])}
         onRemove={(index) =>
@@ -299,9 +302,9 @@ export function PropertyForm({
         placeholder="https://…"
       />
       <p className="-mt-4 text-caption-sm text-muted">
-        Para fotos de Google Drive usá el link directo de este formato (el
-        archivo debe estar compartido con «cualquiera con el enlace»):
-        https://drive.google.com/thumbnail?id=ID_DE_ARCHIVO&amp;sz=w1200
+        Podés pegar el link de cualquier foto compartida de Google Drive
+        («cualquiera con el enlace») y se convierte automáticamente a un link
+        directo. También acepta URLs de imagen de cualquier otro sitio.
       </p>
 
       <fieldset>

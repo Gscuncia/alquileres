@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminForAction } from "@/lib/require-admin";
 import { propertySchema } from "@/lib/validations/property";
+import { toDirectDriveUrl } from "@/lib/drive-url";
 import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
@@ -50,7 +51,7 @@ function buildPropertyInput(formData: FormData) {
     bedrooms: number("bedrooms"),
     bathrooms: number("bathrooms"),
     amenities: list("amenities"),
-    images: list("images"),
+    images: list("images").map(toDirectDriveUrl),
     color: text("color"),
     published,
     sortOrder: number("sortOrder"),

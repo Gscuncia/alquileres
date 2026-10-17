@@ -132,6 +132,26 @@ describe("property actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/propiedades");
   });
 
+  it("normalizes a raw Drive share link to the direct thumbnail URL before create", async () => {
+    const formData = buildFormData();
+    formData.delete("images");
+    formData.append(
+      "images",
+      "https://drive.google.com/file/d/1AbC_dEf-1234567890/view?usp=sharing",
+    );
+
+    const result = await createProperty(initialState, formData);
+
+    expect(result.ok).toBe(true);
+    expect(mocks.propertyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        images: [
+          "https://drive.google.com/thumbnail?id=1AbC_dEf-1234567890&sz=w1200",
+        ],
+      }),
+    });
+  });
+
   it("rejects invalid input with Spanish field errors and creates nothing", async () => {
     const result = await createProperty(
       initialState,

@@ -22,13 +22,13 @@ export const Gallery: React.FC<GalleryProps> = ({ images, alt }) => {
         />
       </div>
 
-      <div className="hidden grid-cols-3 gap-2 md:grid md:h-full md:auto-rows-fr">
+      <div className="hidden grid-cols-3 gap-2 md:grid">
         {thumbnails.map((image, index) => (
           <button
             key={image}
             type="button"
             onClick={() => setMainIndex(index)}
-            className={`relative overflow-hidden rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
+            className={`relative aspect-square overflow-hidden rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
               index === mainIndex ? "ring-2 ring-ink" : ""
             }`}
             aria-label={`Ver foto ${index + 1}`}

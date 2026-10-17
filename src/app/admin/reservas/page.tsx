@@ -8,7 +8,6 @@ import { normalizeForSearch } from "@/lib/search";
 import { deleteBooking } from "@/app/admin/bookings/actions";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import {
-  AdminPanel,
   AdminEmptyState,
   AdminPageHeader,
   AdminField,
@@ -162,7 +161,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
             : "Todavía no hay reservas cargadas. Creá la primera con el botón Nueva reserva o haciendo clic en un día del Calendario."}
         </AdminEmptyState>
       ) : (
-        <AdminPanel>
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-surface-soft text-left">
@@ -224,7 +223,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
               ))}
             </tbody>
           </table>
-        </AdminPanel>
+        </div>
       )}
     </div>
   );

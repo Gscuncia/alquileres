@@ -17,7 +17,9 @@ describe("LandingPage", () => {
         title: "Departamento luminoso frente al mar",
         location: "San Clemente del Tuyú, Buenos Aires",
         shortDescription: "Moderno departamento a una cuadra de la playa",
-        images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80"],
+        images: [
+          { url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", fit: "cover", position: "center" },
+        ],
       },
       {
         id: "prop-2",
@@ -25,7 +27,9 @@ describe("LandingPage", () => {
         title: "Chalet amplio a cinco cuadras del mar",
         location: "San Clemente del Tuyú, Buenos Aires",
         shortDescription: "Chalet de tres dormitorios con jardín",
-        images: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"],
+        images: [
+          { url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80", fit: "cover", position: "center" },
+        ],
       },
     ]);
 

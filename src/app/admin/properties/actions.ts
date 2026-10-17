@@ -11,11 +11,24 @@ import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
 } from "@/lib/admin-action-types";
+import {
+  IMAGE_FITS,
+  IMAGE_POSITIONS,
+  type ImageFit,
+  type ImagePosition,
+} from "@/lib/image-framing";
 
 /**
- * Form normalizers: repeated `amenities`/`images` entries arrive ordered from
- * the dynamic list editors; numeric fields arrive as strings and are coerced
- * so the zod schema can validate them as numbers.
+ * Form normalizers: repeated `amenities` entries and image rows arrive
+ * ordered from the dynamic list editors; numeric fields arrive as strings
+ * and are coerced so the zod schema can validate them as numbers.
+ *
+ * Images arrive as three parallel lists (`images`, `imageFit`,
+ * `imagePosition`), one entry per row in DOM order, zipped by index here.
+ * Rows with an empty URL (after trim + Drive conversion) are dropped after
+ * the zip so list alignment never desyncs. Invalid/missing fit/position
+ * values become `undefined` so the zod defaults apply: we never pass an
+ * invalid enum string down.
  */
 function buildPropertyInput(formData: FormData) {
   const text = (key: string): string => {
@@ -29,6 +42,21 @@ function buildPropertyInput(formData: FormData) {
       .map((value) => (typeof value === "string" ? value.trim() : ""))
       .filter((value) => value.length > 0);
 
+  const strings = (key: string): string[] =>
+    formData
+      .getAll(key)
+      .map((value) => (typeof value === "string" ? value.trim() : ""));
+
+  const parseFit = (value: string | undefined): ImageFit | undefined =>
+    (IMAGE_FITS as readonly string[]).includes(value ?? "")
+      ? (value as ImageFit)
+      : undefined;
+
+  const parsePosition = (value: string | undefined): ImagePosition | undefined =>
+    (IMAGE_POSITIONS as readonly string[]).includes(value ?? "")
+      ? (value as ImagePosition)
+      : undefined;
+
   const number = (key: string): number | undefined => {
     const raw = text(key).trim();
     if (raw === "") return undefined;
@@ -41,6 +69,18 @@ function buildPropertyInput(formData: FormData) {
   const published =
     formData.getAll("published").map(String).pop() === "true";
 
+  const urls = strings("images").map(toDirectDriveUrl);
+  const fits = strings("imageFit");
+  const positions = strings("imagePosition");
+
+  const images = urls
+    .map((url, index) => ({
+      url,
+      fit: parseFit(fits[index]),
+      position: parsePosition(positions[index]),
+    }))
+    .filter((row) => row.url.length > 0);
+
   return {
     title: text("title"),
     slug: text("slug"),
@@ -51,7 +91,7 @@ function buildPropertyInput(formData: FormData) {
     bedrooms: number("bedrooms"),
     bathrooms: number("bathrooms"),
     amenities: list("amenities"),
-    images: list("images").map(toDirectDriveUrl),
+    images,
     color: text("color"),
     published,
     sortOrder: number("sortOrder"),
@@ -62,11 +102,20 @@ function collectFieldErrors(
   error: z.ZodError,
 ): Record<string, string> {
   const fieldErrors: Record<string, string> = {};
+  const imageMessages: string[] = [];
   for (const issue of error.issues) {
     const key = String(issue.path[0] ?? "");
-    if (key && !(key in fieldErrors)) {
+    if (!key) continue;
+    // Image issues carry nested paths like ["images", 0, "url"]; they all
+    // aggregate under the single "images" key as one readable message.
+    if (key === "images") {
+      imageMessages.push(issue.message);
+    } else if (!(key in fieldErrors)) {
       fieldErrors[key] = issue.message;
     }
+  }
+  if (imageMessages.length > 0) {
+    fieldErrors.images = imageMessages.join("; ");
   }
   return fieldErrors;
 }

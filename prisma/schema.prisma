@@ -105,7 +105,7 @@ model Property {
   bedrooms         Int
   bathrooms        Int
   amenities        String[]
-  images           String[]
+  images           Json @default("[]")
   published        Boolean  @default(true)
   sortOrder        Int      @default(0) @map("sort_order")
   /// Optional custom calendar color (hex, e.g. "#460479"); null = palette.

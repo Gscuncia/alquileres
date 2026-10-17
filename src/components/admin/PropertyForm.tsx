@@ -4,6 +4,13 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
 import { toDirectDriveUrl } from "@/lib/drive-url";
+import {
+  IMAGE_FITS,
+  IMAGE_POSITIONS,
+  type ImageFit,
+  type ImagePosition,
+  type PropertyImage,
+} from "@/lib/image-framing";
 import { Button } from "@/components/design-system";
 import {
   AdminField,
@@ -22,7 +29,7 @@ export interface PropertyFormValues {
   bedrooms: string;
   bathrooms: string;
   amenities: string[];
-  images: string[];
+  images: PropertyImage[];
   /** Custom calendar color (`#rrggbb`) or "" for the palette fallback. */
   color: string;
   published: boolean;
@@ -58,6 +65,126 @@ function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+const FIT_OPTIONS: ReadonlyArray<{ value: ImageFit; label: string }> = [
+  { value: "cover", label: "Llenar el cuadro" },
+  { value: "contain", label: "Mostrar completa" },
+];
+
+const POSITION_OPTIONS: ReadonlyArray<{
+  value: ImagePosition;
+  label: string;
+}> = [
+  { value: "top-left", label: "Esquina superior izquierda" },
+  { value: "top", label: "Arriba" },
+  { value: "top-right", label: "Esquina superior derecha" },
+  { value: "left", label: "Izquierda" },
+  { value: "center", label: "Centro" },
+  { value: "right", label: "Derecha" },
+  { value: "bottom-left", label: "Esquina inferior izquierda" },
+  { value: "bottom", label: "Abajo" },
+  { value: "bottom-right", label: "Esquina inferior derecha" },
+];
+
+/**
+ * Ordered image-rows editor: each row submits three parallel entries
+ * (`images` URL, `imageFit`, `imagePosition`) in DOM order so the action can
+ * zip them by index. The position select is never disabled: disabled selects
+ * do not submit and would break the FormData alignment.
+ */
+function ImageListEditor({
+  rows,
+  onChangeUrl,
+  onChangeFit,
+  onChangePosition,
+  onAdd,
+  onRemove,
+  error,
+}: {
+  rows: PropertyImage[];
+  onChangeUrl: (index: number, value: string) => void;
+  onChangeFit: (index: number, value: ImageFit) => void;
+  onChangePosition: (index: number, value: ImagePosition) => void;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+  error?: string;
+}) {
+  return (
+    <fieldset>
+      <legend className="block text-caption-sm font-medium text-ink mb-1">
+        Imágenes
+      </legend>
+      <div className="space-y-2">
+        {rows.map((row, index) => (
+          <div key={index} className="flex items-start gap-2">
+            <AdminInput
+              name="images"
+              type="url"
+              value={row.url}
+              placeholder="https://…"
+              aria-label={`Imágenes ${index + 1}`}
+              onChange={(event) => onChangeUrl(index, event.target.value)}
+            />
+            <select
+              name="imageFit"
+              value={row.fit}
+              aria-label={`Encuadre ${index + 1}`}
+              className="h-10 rounded-sm border border-hairline bg-canvas px-2 text-body-sm text-ink"
+              onChange={(event) =>
+                onChangeFit(
+                  index,
+                  (IMAGE_FITS as readonly string[]).includes(event.target.value)
+                    ? (event.target.value as ImageFit)
+                    : "cover",
+                )
+              }
+            >
+              {FIT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <select
+              name="imagePosition"
+              value={row.position}
+              aria-label={`Posición ${index + 1}`}
+              className="h-10 rounded-sm border border-hairline bg-canvas px-2 text-body-sm text-ink"
+              onChange={(event) =>
+                onChangePosition(
+                  index,
+                  (IMAGE_POSITIONS as readonly string[]).includes(
+                    event.target.value,
+                  )
+                    ? (event.target.value as ImagePosition)
+                    : "center",
+                )
+              }
+            >
+              {POSITION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onRemove(index)}
+              aria-label={`Quitar fila ${index + 1} de Imágenes`}
+            >
+              Quitar
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button type="button" variant="secondary" onClick={onAdd} className="mt-2">
+        Agregar imagen
+      </Button>
+      <AdminError message={error} />
+    </fieldset>
+  );
 }
 
 /**
@@ -137,7 +264,7 @@ export function PropertyForm({
   const [amenities, setAmenities] = useState<string[]>(
     initialValues?.amenities ?? EMPTY_PROPERTY_FORM.amenities,
   );
-  const [images, setImages] = useState<string[]>(
+  const [images, setImages] = useState<PropertyImage[]>(
     initialValues?.images ?? EMPTY_PROPERTY_FORM.images,
   );
   const [customColor, setCustomColor] = useState(
@@ -283,28 +410,46 @@ export function PropertyForm({
         placeholder="Wi-Fi"
       />
 
-      <ListEditor
-        name="images"
-        label="Imágenes"
-        addLabel="Agregar imagen"
+      <ImageListEditor
         rows={images}
-        type="url"
-        onChange={(index, value) =>
+        onChangeUrl={(index, value) =>
           setImages((rows) =>
-            rows.map((row, i) => (i === index ? toDirectDriveUrl(value) : row)),
+            rows.map((row, i) =>
+              i === index ? { ...row, url: toDirectDriveUrl(value) } : row,
+            ),
           )
         }
-        onAdd={() => setImages((rows) => [...rows, ""])}
+        onChangeFit={(index, value) =>
+          setImages((rows) =>
+            rows.map((row, i) => (i === index ? { ...row, fit: value } : row)),
+          )
+        }
+        onChangePosition={(index, value) =>
+          setImages((rows) =>
+            rows.map((row, i) =>
+              i === index ? { ...row, position: value } : row,
+            ),
+          )
+        }
+        onAdd={() =>
+          setImages((rows) => [
+            ...rows,
+            { url: "", fit: "cover", position: "center" },
+          ])
+        }
         onRemove={(index) =>
           setImages((rows) => rows.filter((_, i) => i !== index))
         }
         error={fieldErrors.images}
-        placeholder="https://…"
       />
       <p className="-mt-4 text-caption-sm text-muted">
         Podés pegar el link de cualquier foto compartida de Google Drive
         («cualquiera con el enlace») y se convierte automáticamente a un link
         directo. También acepta URLs de imagen de cualquier otro sitio.
+      </p>
+      <p className="-mt-4 text-caption-sm text-muted">
+        Usá el selector de encuadre para elegir qué parte de la foto se ve en
+        los recuadros cuadrados.
       </p>
 
       <fieldset>

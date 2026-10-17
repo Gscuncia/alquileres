@@ -32,7 +32,9 @@ const dbProperty = {
   bedrooms: 1,
   bathrooms: 1,
   amenities: ["Wi-Fi", "Cocina equipada"],
-  images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80"],
+  images: [
+    { url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", fit: "cover", position: "center" },
+  ],
   published: true,
   sortOrder: 1,
   createdAt: new Date(),
@@ -70,6 +72,25 @@ describe("properties-db", () => {
       mocks.findMany.mockRejectedValue(new Error("connection refused"));
 
       await expect(getPublishedProperties()).resolves.toEqual([]);
+    });
+
+    it("wraps legacy plain-string image URLs into framed entries", async () => {
+      mocks.findMany.mockResolvedValue([
+        {
+          ...dbProperty,
+          images: ["https://images.unsplash.com/legacy.jpg"],
+        },
+      ]);
+
+      const result = await getPublishedProperties();
+
+      expect(result[0].images).toEqual([
+        {
+          url: "https://images.unsplash.com/legacy.jpg",
+          fit: "cover",
+          position: "center",
+        },
+      ]);
     });
   });
 

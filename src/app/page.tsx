@@ -8,6 +8,7 @@ import {
 } from "@/components/design-system";
 import { LOCATION_ADDRESS } from "@/lib/location";
 import { getPublishedProperties } from "@/lib/properties-db";
+import { imageStyle } from "@/lib/image-framing";
 
 const GOOGLE_REVIEWS_URL =
   "https://www.google.com/travel/search?q=alquileres%20anita%20google&g2lb=4965990%2C72471280%2C72573224%2C72647020%2C72686036%2C72803964%2C72882230%2C73064764%2C121529350%2C121608706%2C121738283%2C121762713%2C121921501%2C121951222%2C122078727%2C122093071&hl=es-419&gl=ar&ssta=1&ts=CAEaKwopEicyJTB4OTU5YzFiNWZiYjcxNDRlNToweGZlMzM4Y2M5N2M5ZjJmOTc&qs=CAEyFENnc0lsOV84NUplWjQ1bi1BUkFCOAI&ap=ugEHcmV2aWV3cw&ictx=111&ved=0CAAQ5JsGahcKEwiQsOOMuLSXAxUAAAAAHQAAAAAQCg";
@@ -27,16 +28,20 @@ export default async function LandingPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-x-4 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
-            {properties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                href={`/propiedades/${property.slug}`}
-                title={property.location}
-                image={property.images[0]}
-                imageAlt={property.title}
-                lines={[property.title, property.shortDescription]}
-              />
-            ))}
+            {properties.map((property) => {
+              const firstImage = property.images[0];
+              return (
+                <PropertyCard
+                  key={property.id}
+                  href={`/propiedades/${property.slug}`}
+                  title={property.location}
+                  image={firstImage?.url ?? ""}
+                  imageStyle={firstImage ? imageStyle(firstImage) : undefined}
+                  imageAlt={property.title}
+                  lines={[property.title, property.shortDescription]}
+                />
+              );
+            })}
           </div>
         </section>
       </main>

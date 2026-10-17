@@ -70,6 +70,8 @@ function buildFormData(overrides: Record<string, string> = {}): FormData {
     "images",
     "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
   );
+  data.append("imageFit", "cover");
+  data.append("imagePosition", "center");
   return data;
 }
 
@@ -122,7 +124,13 @@ describe("property actions", () => {
         sortOrder: 5,
         published: true,
         amenities: ["Wi-Fi", "Cocina equipada"],
-        images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"],
+        images: [
+          {
+            url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+            fit: "cover",
+            position: "center",
+          },
+        ],
       }),
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/");
@@ -146,7 +154,60 @@ describe("property actions", () => {
     expect(mocks.propertyCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         images: [
-          "https://drive.google.com/thumbnail?id=1AbC_dEf-1234567890&sz=w1200",
+          {
+            url: "https://drive.google.com/thumbnail?id=1AbC_dEf-1234567890&sz=w1200",
+            fit: "cover",
+            position: "center",
+          },
+        ],
+      }),
+    });
+  });
+
+  it("zips url/fit/position triples by index and applies framing", async () => {
+    const formData = buildFormData();
+    formData.delete("images");
+    formData.delete("imageFit");
+    formData.delete("imagePosition");
+    formData.append("images", "https://images.example/a.jpg");
+    formData.append("imageFit", "contain");
+    formData.append("imagePosition", "top-left");
+    formData.append("images", "https://images.example/b.jpg");
+    formData.append("imageFit", "cover");
+    formData.append("imagePosition", "bottom-right");
+
+    const result = await createProperty(initialState, formData);
+
+    expect(result.ok).toBe(true);
+    expect(mocks.propertyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        images: [
+          { url: "https://images.example/a.jpg", fit: "contain", position: "top-left" },
+          { url: "https://images.example/b.jpg", fit: "cover", position: "bottom-right" },
+        ],
+      }),
+    });
+  });
+
+  it("drops rows with an empty URL and falls back to zod defaults on malformed fit/position", async () => {
+    const formData = buildFormData();
+    formData.delete("images");
+    formData.delete("imageFit");
+    formData.delete("imagePosition");
+    formData.append("images", "");
+    formData.append("imageFit", "cover");
+    formData.append("imagePosition", "center");
+    formData.append("images", "https://images.example/b.jpg");
+    formData.append("imageFit", "stretch");
+    formData.append("imagePosition", "diagonal");
+
+    const result = await createProperty(initialState, formData);
+
+    expect(result.ok).toBe(true);
+    expect(mocks.propertyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        images: [
+          { url: "https://images.example/b.jpg", fit: "cover", position: "center" },
         ],
       }),
     });
@@ -306,7 +367,13 @@ describe("property actions", () => {
       bedrooms: 2,
       bathrooms: 1,
       amenities: ["Wi-Fi", "Cocina equipada"],
-      images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"],
+      images: [
+        {
+          url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+          fit: "cover",
+          position: "center",
+        },
+      ],
       sortOrder: 5,
       createdAt: new Date(),
       updatedAt: new Date(),

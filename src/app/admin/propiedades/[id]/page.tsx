@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { updateProperty } from "@/app/admin/properties/actions";
 import { PropertyForm } from "@/components/admin/PropertyForm";
+import { normalizeImages } from "@/lib/image-framing";
 
 interface EditPropertyPageProps {
   params: { id: string };
@@ -56,7 +57,7 @@ export default async function EditPropertyPage({
           bedrooms: String(property.bedrooms),
           bathrooms: String(property.bathrooms),
           amenities: property.amenities,
-          images: property.images,
+          images: normalizeImages(property.images),
           color: property.color ?? "",
           published: property.published,
           sortOrder: String(property.sortOrder),

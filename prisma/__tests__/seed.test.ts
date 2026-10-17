@@ -159,11 +159,15 @@ describe("prisma seed", () => {
       expect(call[0].create.amenities).toEqual(["Wi-Fi", "Cocina equipada"]);
       expect(call[0].create.images.length).toBeGreaterThanOrEqual(2);
       expect(call[0].create.images.length).toBeLessThanOrEqual(3);
-      call[0].create.images.forEach((url: string) => {
-        expect(url).toMatch(
-          /^https:\/\/images\.unsplash\.com\/photo-[\w-]+/,
-        );
-      });
+      call[0].create.images.forEach(
+        (entry: { url: string; fit: string; position: string }) => {
+          expect(entry.url).toMatch(
+            /^https:\/\/images\.unsplash\.com\/photo-[\w-]+/,
+          );
+          expect(entry.fit).toBe("cover");
+          expect(entry.position).toBe("center");
+        },
+      );
     });
   });
 

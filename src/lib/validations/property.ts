@@ -70,7 +70,27 @@ export const propertySchema = z.object({
     .int({ message: "Los baños deben ser un número entero mayor o igual a 0." })
     .min(0, { message: "Los baños deben ser un número entero mayor o igual a 0." }),
   amenities: z.array(z.string().trim().min(1)).optional(),
-  images: z.array(httpUrl).optional(),
+  images: z
+    .array(
+      z.object({
+        url: httpUrl,
+        fit: z.enum(["cover", "contain"]).default("cover"),
+        position: z
+          .enum([
+            "top-left",
+            "top",
+            "top-right",
+            "left",
+            "center",
+            "right",
+            "bottom-left",
+            "bottom",
+            "bottom-right",
+          ])
+          .default("center"),
+      }),
+    )
+    .optional(),
   color: hexColor,
   published: z.boolean().default(true),
   sortOrder: z

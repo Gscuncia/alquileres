@@ -73,6 +73,11 @@ export async function seedAdmin(prisma: PrismaClient) {
 }
 
 // Unsplash URLs are whitelisted in next.config.mjs (images.unsplash.com only).
+/** Legacy-compatible framing wrapper: every seeded image frames as cover/center. */
+function framedImage(url: string) {
+  return { url, fit: "cover", position: "center" };
+}
+
 export async function seedProperties(prisma: PrismaClient) {
   const properties = [
     {
@@ -88,9 +93,9 @@ export async function seedProperties(prisma: PrismaClient) {
       bathrooms: 1,
       amenities: ["Wi-Fi", "Cocina equipada"],
       images: [
-        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
-        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80",
-        "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80",
+        framedImage("https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80"),
       ],
       published: true,
       sortOrder: 1,
@@ -107,8 +112,8 @@ export async function seedProperties(prisma: PrismaClient) {
       bathrooms: 2,
       amenities: ["Wi-Fi", "Cocina equipada"],
       images: [
-        "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&q=80",
-        "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80",
+        framedImage("https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80"),
       ],
       published: true,
       sortOrder: 2,
@@ -125,9 +130,9 @@ export async function seedProperties(prisma: PrismaClient) {
       bathrooms: 1,
       amenities: ["Wi-Fi", "Cocina equipada"],
       images: [
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80",
-        "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=800&q=80",
-        "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=800&q=80",
+        framedImage("https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=800&q=80"),
       ],
       published: true,
       sortOrder: 3,
@@ -144,9 +149,9 @@ export async function seedProperties(prisma: PrismaClient) {
       bathrooms: 2,
       amenities: ["Wi-Fi", "Cocina equipada"],
       images: [
-        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
-        "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
-        "https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800&q=80",
+        framedImage("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80"),
+        framedImage("https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800&q=80"),
       ],
       published: true,
       sortOrder: 4,

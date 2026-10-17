@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import type { Property } from "@prisma/client";
+import {
+  normalizeImages,
+  type PropertyImage,
+} from "@/lib/image-framing";
 
 export interface PropertyPublic {
   id: string;
@@ -7,7 +11,7 @@ export interface PropertyPublic {
   title: string;
   location: string;
   shortDescription: string;
-  images: string[];
+  images: PropertyImage[];
 }
 
 export interface PropertyDetail extends PropertyPublic {
@@ -29,7 +33,7 @@ function toPublic(property: Property): PropertyPublic {
     title: property.title,
     location: property.location,
     shortDescription: property.shortDescription,
-    images: property.images,
+    images: normalizeImages(property.images),
   };
 }
 

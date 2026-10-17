@@ -93,7 +93,13 @@ describe("PropertyForm", () => {
       <PropertyForm
         action={mockAction}
         initialValues={{
-          images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"],
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+              fit: "cover",
+              position: "center",
+            },
+          ],
         }}
       />,
     );
@@ -104,6 +110,39 @@ describe("PropertyForm", () => {
 
     await user.click(screen.getByRole("button", { name: /quitar fila 1 de imágenes/i }));
     expect(screen.queryByLabelText(/imágenes 1/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the framing selects with the stored values in edit mode", () => {
+    render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-a",
+              fit: "contain",
+              position: "top-left",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: /encuadre 1/i }),
+    ).toHaveValue("contain");
+    expect(
+      screen.getByRole("combobox", { name: /posición 1/i }),
+    ).toHaveValue("top-left");
+  });
+
+  it("defaults new image rows to cover/center", () => {
+    render(<PropertyForm action={mockAction} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /agregar imagen/i }));
+
+    expect(screen.getByRole("combobox", { name: /encuadre 1/i })).toHaveValue("cover");
+    expect(screen.getByRole("combobox", { name: /posición 1/i })).toHaveValue("center");
   });
 
   it("converts a pasted raw Drive link to the direct thumbnail URL", () => {

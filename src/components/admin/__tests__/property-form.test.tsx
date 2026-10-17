@@ -134,8 +134,10 @@ describe("PropertyForm", () => {
 
     expect(screen.getByAltText("Vista previa 1")).toHaveStyle({
       objectFit: "contain",
-      objectPosition: "25% 75%",
-      transform: "scale(2)",
+      position: "absolute",
+      left: "25%",
+      top: "75%",
+      transform: "translate(-25%, -75%)",
     });
   });
 
@@ -157,7 +159,12 @@ describe("PropertyForm", () => {
       />,
     );
 
-    expect(screen.getByAltText("Vista previa 1")).not.toHaveStyle({ transform: "scale(1)" });
+    expect(screen.getByAltText("Vista previa 1")).toHaveStyle({
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+      transform: "translate(-50%, -50%)",
+    });
   });
 
   it("carries the aligned hidden fields with the stored values", () => {

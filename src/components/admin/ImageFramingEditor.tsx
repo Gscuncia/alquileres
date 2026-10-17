@@ -84,7 +84,7 @@ function ImageRow({
 
   return (
     <div className="flex items-start gap-3">
-      <div className="h-32 w-32 shrink-0 overflow-hidden rounded-md border border-hairline bg-surface-soft">
+      <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-md border border-hairline bg-surface-soft">
         {row.url === "" ? (
           <div className="flex h-full w-full items-center justify-center px-2 text-center text-caption-sm text-muted">
             Pegá una URL para ver la vista previa

@@ -58,13 +58,39 @@ describe("Gallery", () => {
     render(<Gallery images={framed} alt="Depto 1" />);
 
     const main = screen.getByRole("img", { name: "Depto 1" });
-    expect(main).toHaveStyle({ objectFit: "contain", objectPosition: "50% 0%" });
+    expect(main).toHaveStyle({
+      objectFit: "contain",
+      left: "50%",
+      top: "0%",
+      transform: "translate(-50%, -0%)",
+    });
 
     // Both the desktop grid and the mobile strip render in jsdom.
     const thumbnail = screen.getAllByAltText("Depto 1 - foto 2")[0];
     expect(thumbnail).toHaveStyle({
       objectFit: "cover",
-      objectPosition: "100% 100%",
+      left: "100%",
+      top: "100%",
+      transform: "translate(-100%, -100%)",
+    });
+  });
+
+  it("keeps the box covered while zoomed and pans via element geometry", () => {
+    const framed: PropertyImage[] = [
+      { url: "https://img.example/main.jpg", fit: "cover", x: 30, y: 40, zoom: 2 },
+      ...images.slice(1),
+    ];
+    render(<Gallery images={framed} alt="Depto 1" />);
+
+    const main = screen.getByRole("img", { name: "Depto 1" });
+    expect(main).toHaveStyle({
+      position: "absolute",
+      width: "200%",
+      height: "200%",
+      left: "30%",
+      top: "40%",
+      transform: "translate(-30%, -40%)",
+      objectFit: "cover",
     });
   });
 });

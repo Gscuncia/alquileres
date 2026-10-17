@@ -105,16 +105,39 @@ export function normalizeImages(raw: unknown): PropertyImage[] {
     .filter((image): image is PropertyImage => image !== null);
 }
 
-/** React style for an <img>: { objectFit, objectPosition, transform? }. */
+/**
+ * React style for an <img> that must sit inside a positioned (`relative`)
+ * overflow-hidden box. The image element is oversized by the zoom factor and
+ * anchored so the stored focal point (x%, y%) sits at the same point of the
+ * visible box. Rendering through element geometry (left/top plus a
+ * translate(-x, -y)) pans at ANY zoom and for ANY image aspect; plain
+ * object-position only pans along the axes where the fixed cover layout has
+ * slack, which is why pans appeared frozen after zooming. With zoom >= 1 the
+ * element always fully covers the box.
+ */
 export function imageStyle(image: PropertyImage): CSSProperties {
-  const style: CSSProperties = {
-    objectFit: image.fit,
-    objectPosition: `${image.x}% ${image.y}%`,
+  const zoomScale = Math.max(image.zoom, 1);
+  const anchor = {
+    position: "absolute" as const,
+    left: `${image.x}%`,
+    top: `${image.y}%`,
+    transform: `translate(-${image.x}%, -${image.y}%)`,
+    objectPosition: "50% 50%",
   };
-  // With zoom === 1 the baseline fit already renders as intended; adding
-  // transform even then would blur edges and shift contain layout.
-  if (image.zoom !== 1) {
-    style.transform = `scale(${image.zoom})`;
+
+  if (image.fit === "contain") {
+    return {
+      ...anchor,
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+    };
   }
-  return style;
+
+  return {
+    ...anchor,
+    width: `${zoomScale * 100}%`,
+    height: `${zoomScale * 100}%`,
+    objectFit: "cover",
+  };
 }

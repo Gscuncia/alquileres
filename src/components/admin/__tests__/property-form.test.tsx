@@ -254,7 +254,7 @@ describe("PropertyForm", () => {
       />,
     );
 
-    const slider = screen.getByRole("slider", { name: /tamaño de la foto/i });
+    const slider = screen.getByRole("slider", { name: /zoom de la foto/i });
     fireEvent.change(slider, { target: { value: "1.75" } });
 
     expect(container.querySelector('input[name="imageZoom"]')).toHaveValue("1.75");

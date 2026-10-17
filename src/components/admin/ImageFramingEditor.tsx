@@ -121,17 +121,17 @@ function ImageRow({
             htmlFor={`imageZoom-${index + 1}`}
             className="text-caption-sm font-medium text-ink"
           >
-            Tamaño
+            Zoom
           </label>
           <input
             id={`imageZoom-${index + 1}`}
             type="range"
             name="imageZoom"
-            min="0.5"
+            min="1"
             max="3"
             step="0.05"
-            value={row.zoom}
-            aria-label="Tamaño de la foto"
+            value={Math.max(1, row.zoom)}
+            aria-label="Zoom de la foto"
             className="h-2 w-full cursor-pointer accent-primary"
             onChange={(event) =>
               onChange({ zoom: Number(event.target.value) })
@@ -209,8 +209,8 @@ export function ImageFramingEditor({
       </Button>
       <AdminError message={error} />
       <p className="mt-1 text-caption-sm text-muted">
-        Mover y achicar la foto en la vista previa define cómo se ve en la
-        página pública.
+        Arrastrá la foto y ajustá el zoom: el recuadro siempre queda lleno de
+        la imagen. Para ver la foto entera usá «Mostrar completa».
       </p>
     </fieldset>
   );

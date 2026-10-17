@@ -8,6 +8,7 @@ import {
   AdminLabel,
   AdminError,
 } from "@/components/admin/primitives";
+import { normalizeForSearch } from "@/lib/search";
 
 export interface GuestOption {
   id: string;
@@ -23,14 +24,33 @@ interface GuestPickerProps {
   fieldError?: string;
 }
 
+/** True when the guest matches the query on any searchable field. */
+function guestMatches(guest: GuestOption, query: string): boolean {
+  const needle = normalizeForSearch(query);
+  if (needle === "") return true;
+  return [
+    guest.firstName,
+    guest.lastName,
+    `${guest.firstName} ${guest.lastName}`,
+    guest.dni,
+    guest.phone,
+  ].some((field) => normalizeForSearch(field).includes(needle));
+}
+
 /**
- * Guest selector: a native dropdown listing every loaded guest
- * ("Nombre Apellido — DNI"). Required so a booking always links to an
- * existing guest from the guest agenda, never a free-text name. Includes a
- * prominent call to action when no guests are loaded yet.
+ * Searchable guest selector for booking forms: a text search filters the
+ * native dropdown by first name, last name, DNI or phone (accent- and
+ * case-insensitive) so the picker stays usable as the guest agenda grows.
+ * The select is the required form field ("guestId"); the search input is
+ * unnamed so it never reaches the server action. Includes a prominent call
+ * to action when no guests are loaded yet.
  */
 export function GuestPicker({ guests, defaultValue, fieldError }: GuestPickerProps) {
   const [guestId, setGuestId] = useState(defaultValue ?? "");
+  const [query, setQuery] = useState("");
+
+  const filtered = guests.filter((guest) => guestMatches(guest, query));
+  const isFiltering = query.trim() !== "";
 
   if (guests.length === 0) {
     return (
@@ -56,6 +76,18 @@ export function GuestPicker({ guests, defaultValue, fieldError }: GuestPickerPro
 
   return (
     <div className="space-y-2">
+      <div className="space-y-2">
+        <AdminLabel htmlFor="guestSearch">
+          Buscar huésped
+        </AdminLabel>
+        <AdminInput
+          type="search"
+          id="guestSearch"
+          placeholder="Nombre, apellido, DNI o teléfono…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
       <AdminLabel htmlFor="guestId">
         Huésped <span className="text-primary-error-text">*</span>
       </AdminLabel>
@@ -68,12 +100,22 @@ export function GuestPicker({ guests, defaultValue, fieldError }: GuestPickerPro
         onChange={(event) => setGuestId(event.target.value)}
       >
         <option value="">Seleccionar huésped…</option>
-        {guests.map((guest) => (
+        {filtered.map((guest) => (
           <option key={guest.id} value={guest.id}>
             {guest.firstName} {guest.lastName} — DNI {guest.dni}
           </option>
         ))}
+        {isFiltering && filtered.length === 0 && (
+          <option value="" disabled>
+            Sin huéspedes que coincidan con la búsqueda
+          </option>
+        )}
       </AdminInput>
+      {isFiltering && filtered.length > 0 && (
+        <p className="text-caption-sm text-muted">
+          {filtered.length} de {guests.length} huéspedes coinciden con la búsqueda.
+        </p>
+      )}
       <AdminError message={fieldError} />
       <p className="text-caption-sm text-muted">
         ¿El huésped no está cargado?{" "}

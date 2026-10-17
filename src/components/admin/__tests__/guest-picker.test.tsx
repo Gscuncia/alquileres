@@ -65,4 +65,70 @@ describe("GuestPicker", () => {
     const select = screen.getByRole("combobox", { name: /huésped/i }) as HTMLSelectElement;
     expect(select).toHaveValue("g2");
   });
+
+  it("filters guests by first name, last name, full name, DNI and phone", () => {
+    render(<GuestPicker guests={guests} />);
+
+    const search = screen.getByRole("searchbox", { name: /buscar huésped/i });
+    const select = screen.getByRole("combobox", { name: /huésped/i }) as HTMLSelectElement;
+
+    fireEvent.change(search, { target: { value: "Juan" } });
+    expect(
+      screen.getByRole("option", { name: "Juan Pérez — DNI 30123456" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Ana García — DNI 27890123" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "García" } });
+    expect(
+      screen.getByRole("option", { name: "Ana García — DNI 27890123" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Juan Pérez — DNI 30123456" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "Ana García" } });
+    expect(
+      screen.getByRole("option", { name: "Ana García — DNI 27890123" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Juan Pérez — DNI 30123456" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "27890" } });
+    expect(screen.getByRole("option", { name: "Ana García — DNI 27890123" })).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "6555" } });
+    expect(screen.getByRole("option", { name: "Ana García — DNI 27890123" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Juan Pérez — DNI 30123456" })).not.toBeInTheDocument();
+  });
+
+  it("matches accents insensitively and clears back to the full list", () => {
+    render(<GuestPicker guests={guests} />);
+
+    const search = screen.getByRole("searchbox", { name: /buscar huésped/i });
+    fireEvent.change(search, { target: { value: "GARCIA" } });
+    expect(
+      screen.getByRole("option", { name: "Ana García — DNI 27890123" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/1 de 2 huéspedes coinciden/i)).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "" } });
+    expect(screen.getByRole("option", { name: "Juan Pérez — DNI 30123456" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Ana García — DNI 27890123" })).toBeInTheDocument();
+  });
+
+  it("shows a no-results option when the search matches nobody", () => {
+    render(<GuestPicker guests={guests} />);
+
+    const search = screen.getByRole("searchbox", { name: /buscar huésped/i });
+    fireEvent.change(search, { target: { value: "gnomo" } });
+
+    expect(
+      screen.getByText(/sin huéspedes que coincidan con la búsqueda/i),
+    ).toBeInTheDocument();
+    const select = screen.getByRole("combobox", { name: /huésped/i }) as HTMLSelectElement;
+    expect(select).toHaveValue("");
+  });
 });

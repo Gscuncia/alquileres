@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Button } from "./Button";
 
 export interface TopNavProps {
   logoSrc?: string;
@@ -86,13 +87,12 @@ export const TopNav: React.FC<TopNavProps> = ({
             <span className="mt-2 h-1 w-16 rounded-full bg-primary md:w-20" aria-hidden="true" />
           </div>
 
-          {/* Login link in the top-right corner */}
-          <Link
-            href="/auth/signin"
-            className="hidden rounded-sm px-3 py-2 text-caption font-medium text-muted transition-all hover:bg-cream-strong hover:text-ink md:inline-flex md:text-nav-link"
-          >
-            Login
-          </Link>
+          {/* Login button in the top-right corner */}
+          <div className="hidden md:block">
+            <Button asChild variant="primary">
+              <Link href="/auth/signin">Login</Link>
+            </Button>
+          </div>
         </div>
 
         {/* Navigation row */}

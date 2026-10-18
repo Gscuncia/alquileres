@@ -94,7 +94,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
         title="Reservas"
         action={
           <Button asChild variant="primary">
-            <Link href="/admin/calendario?nueva=1">+ Nueva reserva</Link>
+            <Link href="/admin/reservas/nueva">+ Nueva reserva</Link>
           </Button>
         }
       />

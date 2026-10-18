@@ -127,14 +127,13 @@ export function BookingForm({
     checkOutDate !== "" &&
     toUtc(checkInDate, checkInTime).getTime() <
       toUtc(checkOutDate, checkOutTime).getTime();
-  const total =
-    price > 0 && hasStay
-      ? price *
-        stayNights(
-          toUtc(checkInDate, checkInTime),
-          toUtc(checkOutDate, checkOutTime),
-        )
-      : null;
+  const nights = hasStay
+    ? stayNights(
+        toUtc(checkInDate, checkInTime),
+        toUtc(checkOutDate, checkOutTime),
+      )
+    : null;
+  const total = price > 0 && nights !== null ? price * nights : null;
   const rest = total === null ? null : Math.max(0, total - deposit);
 
   return (
@@ -374,6 +373,12 @@ export function BookingForm({
       </AdminField>
 
       <div className="rounded-sm border border-hairline bg-surface-soft px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm text-muted">Cantidad de noches</span>
+          <span className="text-body-sm font-semibold text-ink">
+            {nights === null ? "—" : `${nights} ${nights === 1 ? "noche" : "noches"}`}
+          </span>
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-body-sm text-muted">Monto total de la reserva</span>
           <span className="text-body-sm font-semibold text-ink">

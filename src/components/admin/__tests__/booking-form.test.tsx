@@ -74,7 +74,18 @@ describe("BookingForm payment split", () => {
 
     expect(screen.getByText("Monto total de la reserva")).toBeInTheDocument();
     expect(screen.getByText("Monto a pagar")).toBeInTheDocument();
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    // Summary rows: nights + total + rest.
+    expect(screen.getAllByText("—")).toHaveLength(3);
+  });
+
+  it("counts the nights as soon as the stay dates are complete", () => {
+    renderForm();
+
+    setByLabel("Fecha de ingreso", "2026-10-10");
+    setByLabel("Fecha de egreso", "2026-10-13");
+
+    expect(screen.getByText("Cantidad de noches")).toBeInTheDocument();
+    expect(screen.getByText("3 noches")).toBeInTheDocument();
   });
 
   it("computes the live total from price × nights", () => {

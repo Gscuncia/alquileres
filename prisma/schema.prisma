@@ -119,9 +119,10 @@ model Property {
 }
 
 model TransferRecipient {
-  id       String    @id @default(cuid(2))
-  name     String    @unique
-  bookings Booking[]
+  id              String    @id @default(cuid(2))
+  name            String    @unique
+  depositBookings Booking[] @relation("DepositBookings")
+  restBookings    Booking[] @relation("RestBookings")
 
   @@map("transfer_recipients")
 }
@@ -152,16 +153,19 @@ model Booking {
   id                  String             @id @default(cuid(2))
   propertyId          String             @map("property_id")
   property            Property           @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  transferRecipientId String?            @map("transfer_recipient_id")
-  transferRecipient   TransferRecipient? @relation(fields: [transferRecipientId], references: [id], onDelete: Restrict)
-  guestId             String             @map("guest_id")
+  depositPaymentType         PaymentType        @default(EFECTIVO) @map("deposit_payment_type")
+  depositPaymentMethod       String?            @map("deposit_payment_method")
+  depositTransferRecipientId String?            @map("deposit_transfer_recipient_id")
+  depositTransferRecipient   TransferRecipient? @relation("DepositBookings", fields: [depositTransferRecipientId], references: [id], onDelete: Restrict)
+  restPaymentType            PaymentType        @default(EFECTIVO) @map("rest_payment_type")
+  restTransferRecipientId    String?            @map("rest_transfer_recipient_id")
+  restTransferRecipient      TransferRecipient? @relation("RestBookings", fields: [restTransferRecipientId], references: [id], onDelete: Restrict)
+  guestId                    String             @map("guest_id")
   guest               Guest              @relation(fields: [guestId], references: [id], onDelete: Restrict)
   checkIn             DateTime           @map("check_in")
   checkOut            DateTime           @map("check_out")
   pricePerNight       Decimal            @map("price_per_night") @db.Decimal(12, 2)
   depositAmount       Decimal            @default(0) @map("deposit_amount") @db.Decimal(12, 2)
-  paymentType         PaymentType        @map("payment_type")
-  paymentMethod       String?            @map("payment_method")
   notes               String?
   settledAt           DateTime?          @map("settled_at")
   createdAt           DateTime           @default(now()) @map("created_at")

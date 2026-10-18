@@ -10,10 +10,12 @@ const validBooking = {
   checkOutTime: "10:00",
   pricePerNight: 150,
   depositAmount: 50,
-  paymentType: "EFECTIVO",
-  paymentMethod: "",
+  depositPaymentType: "EFECTIVO",
+  depositPaymentMethod: "",
+  depositRecipientId: "",
+  restPaymentType: "EFECTIVO",
+  restRecipientId: "",
   notes: "",
-  recipientId: "",
 };
 
 function parse(overrides: Record<string, unknown> = {}) {
@@ -28,12 +30,12 @@ describe("bookingSchema", () => {
 
   it("accepts a valid transferencia booking with recipient and keeps the data", () => {
     const result = parse({
-      paymentType: "TRANSFERENCIA",
-      recipientId: "recipient-sonia",
+      depositPaymentType: "TRANSFERENCIA",
+      depositRecipientId: "recipient-sonia",
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.recipientId).toBe("recipient-sonia");
+      expect(result.data.depositRecipientId).toBe("recipient-sonia");
     }
   });
 
@@ -179,30 +181,83 @@ describe("bookingSchema", () => {
   });
 
   describe("payment rules", () => {
-    it("rejects TRANSFERENCIA without recipient", () => {
+    it("rejects a deposit TRANSFERENCIA without recipient", () => {
       const result = parse({
-        paymentType: "TRANSFERENCIA",
-        recipientId: "",
+        depositPaymentType: "TRANSFERENCIA",
+        depositRecipientId: "",
       });
       expect(result.success).toBe(false);
       if (!result.success) {
         const issue = result.error.issues.find(
-          (candidate) => String(candidate.path[0]) === "recipientId",
+          (candidate) => String(candidate.path[0]) === "depositRecipientId",
         );
-        expect(issue?.message).toMatch(/destinatario es obligatorio/);
+        expect(issue?.message).toBe(
+          "El destinatario es obligatorio para la seña por transferencia.",
+        );
       }
     });
 
-    it("boolean fields validate transferencia without recipientId (EFECTIVO keeps null)", () => {
+    it("rejects a rest TRANSFERENCIA without recipient", () => {
       const result = parse({
-        paymentType: "EFECTIVO",
-        recipientId: "recipient-sonia",
+        restPaymentType: "TRANSFERENCIA",
+        restRecipientId: "",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (candidate) => String(candidate.path[0]) === "restRecipientId",
+        );
+        expect(issue?.message).toBe(
+          "El destinatario es obligatorio para el monto a pagar por transferencia.",
+        );
+      }
+    });
+
+    it("accepts TRANSFERENCIA in both parts with their own recipients", () => {
+      const result = parse({
+        depositPaymentType: "TRANSFERENCIA",
+        depositRecipientId: "recipient-sonia",
+        restPaymentType: "TRANSFERENCIA",
+        restRecipientId: "recipient-pablo",
       });
       expect(result.success).toBe(true);
       if (result.success) {
-        // Never persists an efectivo-with-recipient booking.
-        expect(result.data.recipientId).toBeUndefined();
+        expect(result.data.depositRecipientId).toBe("recipient-sonia");
+        expect(result.data.restRecipientId).toBe("recipient-pablo");
       }
+    });
+
+    it("clears recipients when the part is EFECTIVO", () => {
+      const result = parse({
+        depositPaymentType: "EFECTIVO",
+        depositRecipientId: "recipient-sonia",
+        restPaymentType: "EFECTIVO",
+        restRecipientId: "recipient-pablo",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        // Never persists an efectivo-with-recipient part.
+        expect(result.data.depositRecipientId).toBeUndefined();
+        expect(result.data.restRecipientId).toBeUndefined();
+      }
+    });
+
+    it("rejects a deposit above the stay total (150 × 3 = 450)", () => {
+      const result = parse({ depositAmount: 450.01 });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (candidate) => String(candidate.path[0]) === "depositAmount",
+        );
+        expect(issue?.message).toBe(
+          "La seña no puede superar el monto total de la reserva.",
+        );
+      }
+    });
+
+    it("accepts a deposit equal to the stay total", () => {
+      const result = parse({ depositAmount: 450 });
+      expect(result.success).toBe(true);
     });
   });
 });

@@ -58,10 +58,12 @@ function toFormValues(booking: {
   checkOut: Date;
   pricePerNight: unknown;
   depositAmount: unknown;
-  paymentType: "EFECTIVO" | "TRANSFERENCIA";
-  paymentMethod: string | null;
+  depositPaymentType: "EFECTIVO" | "TRANSFERENCIA";
+  depositPaymentMethod: string | null;
+  depositTransferRecipientId: string | null;
+  restPaymentType: "EFECTIVO" | "TRANSFERENCIA";
+  restTransferRecipientId: string | null;
   notes: string | null;
-  transferRecipientId: string | null;
 }) {
   return {
     id: booking.id,
@@ -73,10 +75,12 @@ function toFormValues(booking: {
     checkOutTime: toTimeStr(booking.checkOut),
     pricePerNight: String(Number(booking.pricePerNight)),
     depositAmount: String(Number(booking.depositAmount)),
-    paymentType: booking.paymentType,
-    paymentMethod: booking.paymentMethod ?? "",
+    depositPaymentType: booking.depositPaymentType,
+    depositPaymentMethod: booking.depositPaymentMethod ?? "",
+    depositRecipientId: booking.depositTransferRecipientId ?? "",
+    restPaymentType: booking.restPaymentType,
+    restRecipientId: booking.restTransferRecipientId ?? "",
     notes: booking.notes ?? "",
-    recipientId: booking.transferRecipientId ?? "",
   };
 }
 

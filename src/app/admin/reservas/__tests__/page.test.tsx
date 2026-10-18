@@ -30,12 +30,15 @@ const sampleBooking = {
   id: "b-1",
   propertyId: "p-depto-1",
   property: { id: "p-depto-1", title: "Depto 1" },
-  transferRecipient: null,
+  depositTransferRecipient: null,
+  restTransferRecipient: null,
   guest: { id: "g-1", firstName: "Juan", lastName: "Pérez", dni: "32456778" },
   checkIn: new Date("2026-10-10T12:00:00-03:00"),
   checkOut: new Date("2026-10-13T10:00:00-03:00"),
   pricePerNight: 150,
-  paymentType: "EFECTIVO" as const,
+  depositAmount: 100,
+  depositPaymentType: "EFECTIVO" as const,
+  restPaymentType: "EFECTIVO" as const,
 };
 
 const sampleTransferBooking = {
@@ -43,9 +46,11 @@ const sampleTransferBooking = {
   id: "b-2",
   propertyId: "p-casita",
   property: { id: "p-casita", title: "Casita" },
-  transferRecipient: { id: "r-1", name: "Sonia" },
+  depositTransferRecipient: { id: "r-1", name: "Sonia" },
   guest: { id: "g-2", firstName: "María", lastName: "López", dni: "12345678" },
-  paymentType: "TRANSFERENCIA" as const,
+  depositPaymentType: "TRANSFERENCIA" as const,
+  restPaymentType: "TRANSFERENCIA" as const,
+  restTransferRecipient: { id: "r-2", name: "Pablo" },
 };
 
 describe("ReservasPage filters", () => {
@@ -69,7 +74,12 @@ describe("ReservasPage filters", () => {
 
     expect(mocks.bookingFindMany).toHaveBeenCalledWith({
       where: undefined,
-      include: { property: true, transferRecipient: true, guest: true },
+      include: {
+        property: true,
+        depositTransferRecipient: true,
+        restTransferRecipient: true,
+        guest: true,
+      },
       orderBy: { checkIn: "desc" },
     });
     expect(screen.getByText("Juan Pérez")).toBeInTheDocument();
@@ -78,9 +88,11 @@ describe("ReservasPage filters", () => {
     expect(screen.getByText("12345678")).toBeInTheDocument();
     // "Depto 1" appears in the table cell and in the filter's <option>.
     expect(screen.getAllByText("Depto 1")).toHaveLength(2);
-    // Transferencia shows its destinatario; efectivo does not.
+    // Each payment group shows its own type + destinatario.
     expect(screen.getByText("Transferencia · Sonia")).toBeInTheDocument();
-    expect(screen.getByText("Efectivo")).toBeInTheDocument();
+    expect(screen.getByText("Transferencia · Pablo")).toBeInTheDocument();
+    // The efectivo booking shows "Efectivo" in both payment cells.
+    expect(screen.getAllByText("Efectivo")).toHaveLength(2);
   });
 
   it("shows the empty state when filters return nothing", async () => {
@@ -98,7 +110,12 @@ describe("ReservasPage filters", () => {
 
     expect(mocks.bookingFindMany).toHaveBeenCalledWith({
       where: expect.objectContaining({ propertyId: "p-depto-1" }),
-      include: { property: true, transferRecipient: true, guest: true },
+      include: {
+        property: true,
+        depositTransferRecipient: true,
+        restTransferRecipient: true,
+        guest: true,
+      },
       orderBy: { checkIn: "desc" },
     });
   });

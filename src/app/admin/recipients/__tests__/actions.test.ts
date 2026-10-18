@@ -168,7 +168,12 @@ describe("recipient actions", () => {
       await deleteRecipient(formData);
 
       expect(mocks.bookingCount).toHaveBeenCalledWith({
-        where: { transferRecipientId: "r-1" },
+        where: {
+          OR: [
+            { depositTransferRecipientId: "r-1" },
+            { restTransferRecipientId: "r-1" },
+          ],
+        },
       });
       expect(mocks.recipientDelete).not.toHaveBeenCalled();
       expect(mocks.redirect).toHaveBeenCalledWith(
@@ -182,7 +187,12 @@ describe("recipient actions", () => {
       await deleteRecipient(formData);
 
       expect(mocks.bookingCount).toHaveBeenCalledWith({
-        where: { transferRecipientId: "r-1" },
+        where: {
+          OR: [
+            { depositTransferRecipientId: "r-1" },
+            { restTransferRecipientId: "r-1" },
+          ],
+        },
       });
       expect(mocks.recipientDelete).toHaveBeenCalledWith({ where: { id: "r-1" } });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/destinatarios");

@@ -66,10 +66,12 @@ function buildBookingFormData(
     checkOutTime: "10:00",
     pricePerNight: "150",
     depositAmount: "50",
-    paymentType: "EFECTIVO",
-    paymentMethod: "",
+    depositPaymentType: "EFECTIVO",
+    depositPaymentMethod: "",
+    depositRecipientId: "",
+    restPaymentType: "EFECTIVO",
+    restRecipientId: "",
     notes: "",
-    recipientId: "",
     ...overrides,
   };
   for (const [key, value] of Object.entries(base)) {
@@ -168,8 +170,10 @@ describe("booking actions", () => {
         checkOut: new Date("2026-10-13T10:00:00-03:00"),
         pricePerNight: 150,
         depositAmount: 50,
-        paymentType: "EFECTIVO",
-        transferRecipientId: null,
+        depositPaymentType: "EFECTIVO",
+        depositTransferRecipientId: null,
+        restPaymentType: "EFECTIVO",
+        restTransferRecipientId: null,
       }),
     });
     // The advisory lock is the FIRST statement of the transaction.
@@ -219,30 +223,59 @@ describe("booking actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("never persists an efectivo booking with a recipient", async () => {
-    await createBooking(
-      initialState,
-      buildBookingFormData({ recipientId: "recipient-sonia" }),
-    );
-
-    expect(mocks.txCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ transferRecipientId: null }),
-    });
-  });
-
-  it("persists the recipient for a transferencia payment", async () => {
+  it("never persists an efectivo part with a recipient", async () => {
     await createBooking(
       initialState,
       buildBookingFormData({
-        paymentType: "TRANSFERENCIA",
-        recipientId: "recipient-sonia",
+        depositRecipientId: "recipient-sonia",
+        restRecipientId: "recipient-pablo",
       }),
     );
 
     expect(mocks.txCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        paymentType: "TRANSFERENCIA",
-        transferRecipientId: "recipient-sonia",
+        depositTransferRecipientId: null,
+        restTransferRecipientId: null,
+      }),
+    });
+  });
+
+  it("persists each part's recipient for transferencia payments", async () => {
+    await createBooking(
+      initialState,
+      buildBookingFormData({
+        depositPaymentType: "TRANSFERENCIA",
+        depositRecipientId: "recipient-sonia",
+        restPaymentType: "TRANSFERENCIA",
+        restRecipientId: "recipient-pablo",
+      }),
+    );
+
+    expect(mocks.txCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        depositPaymentType: "TRANSFERENCIA",
+        depositTransferRecipientId: "recipient-sonia",
+        restPaymentType: "TRANSFERENCIA",
+        restTransferRecipientId: "recipient-pablo",
+      }),
+    });
+  });
+
+  it("persists a null recipient when the rest is efectivo and the deposit is transferencia", async () => {
+    await createBooking(
+      initialState,
+      buildBookingFormData({
+        depositPaymentType: "TRANSFERENCIA",
+        depositRecipientId: "recipient-sonia",
+        restPaymentType: "EFECTIVO",
+        restRecipientId: "recipient-pablo",
+      }),
+    );
+
+    expect(mocks.txCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        depositTransferRecipientId: "recipient-sonia",
+        restTransferRecipientId: null,
       }),
     });
   });

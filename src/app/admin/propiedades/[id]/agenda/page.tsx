@@ -45,10 +45,12 @@ function toFormValues(
     /** Prisma Decimal arrives here; converted once at the boundary. */
     pricePerNight: unknown;
     depositAmount: unknown;
-    paymentType: "EFECTIVO" | "TRANSFERENCIA";
-    paymentMethod: string | null;
+    depositPaymentType: "EFECTIVO" | "TRANSFERENCIA";
+    depositPaymentMethod: string | null;
+    depositTransferRecipientId: string | null;
+    restPaymentType: "EFECTIVO" | "TRANSFERENCIA";
+    restTransferRecipientId: string | null;
     notes: string | null;
-    transferRecipientId: string | null;
   },
   propertyId: string,
 ): BookingFormValues {
@@ -62,10 +64,12 @@ function toFormValues(
     checkOutTime: toTimeStr(booking.checkOut),
     pricePerNight: String(Number(booking.pricePerNight)),
     depositAmount: String(Number(booking.depositAmount)),
-    paymentType: booking.paymentType,
-    paymentMethod: booking.paymentMethod ?? "",
+    depositPaymentType: booking.depositPaymentType,
+    depositPaymentMethod: booking.depositPaymentMethod ?? "",
+    depositRecipientId: booking.depositTransferRecipientId ?? "",
+    restPaymentType: booking.restPaymentType,
+    restRecipientId: booking.restTransferRecipientId ?? "",
     notes: booking.notes ?? "",
-    recipientId: booking.transferRecipientId ?? "",
   };
 }
 

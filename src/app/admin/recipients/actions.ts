@@ -117,7 +117,9 @@ export async function deleteRecipient(formData: FormData): Promise<void> {
 
   if (id) {
     const bookingsCount = await prisma.booking.count({
-      where: { transferRecipientId: id },
+      where: {
+        OR: [{ depositTransferRecipientId: id }, { restTransferRecipientId: id }],
+      },
     });
 
     if (bookingsCount > 0) {

@@ -8,13 +8,16 @@ import { GuestPicker, type GuestOption } from "@/components/admin/GuestPicker";
 import {
   AdminField,
   AdminInput,
-  AdminError,
 } from "@/components/admin/primitives";
+import { stayNights, toUtc } from "@/lib/datetime";
+import { formatMoney } from "@/lib/metrics";
 
 export interface RecipientOption {
   id: string;
   name: string;
 }
+
+export type PaymentTypeValue = "EFECTIVO" | "TRANSFERENCIA";
 
 export interface BookingFormValues {
   id?: string;
@@ -26,10 +29,12 @@ export interface BookingFormValues {
   checkOutTime: string;
   pricePerNight: string;
   depositAmount: string;
-  paymentType: "EFECTIVO" | "TRANSFERENCIA";
-  paymentMethod: string;
+  depositPaymentType: PaymentTypeValue;
+  depositPaymentMethod: string;
+  depositRecipientId: string;
+  restPaymentType: PaymentTypeValue;
+  restRecipientId: string;
   notes: string;
-  recipientId: string;
 }
 
 interface BookingFormProps {
@@ -51,10 +56,12 @@ export const EMPTY_BOOKING_FORM: BookingFormValues = {
   checkOutTime: "10:00",
   pricePerNight: "",
   depositAmount: "0",
-  paymentType: "EFECTIVO",
-  paymentMethod: "",
+  depositPaymentType: "EFECTIVO",
+  depositPaymentMethod: "",
+  depositRecipientId: "",
+  restPaymentType: "EFECTIVO",
+  restRecipientId: "",
   notes: "",
-  recipientId: "",
 };
 
 const SLOT_MINUTES = ["00", "30"] as const;
@@ -63,6 +70,29 @@ const SLOT_MINUTES = ["00", "30"] as const;
 const TIME_SLOTS: string[] = Array.from({ length: 24 }, (_, hour) =>
   Array.from(SLOT_MINUTES, (minutes) => `${String(hour).padStart(2, "0")}:${minutes}`),
 ).flat();
+
+/** Money input parser: empty or garbage parses to 0 for live math. */
+function parseMoney(raw: string): number {
+  const parsed = Number(raw);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function recipientSelect(
+  id: string,
+  recipients: RecipientOption[],
+  defaultValue: string,
+) {
+  return (
+    <AdminInput as="select" id={id} name={id} required defaultValue={defaultValue}>
+      <option value="">Seleccionar destinatario…</option>
+      {recipients.map((recipient) => (
+        <option key={recipient.id} value={recipient.id}>
+          {recipient.name}
+        </option>
+      ))}
+    </AdminInput>
+  );
+}
 
 export function BookingForm({
   action,
@@ -74,11 +104,38 @@ export function BookingForm({
 }: BookingFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
   const values = { ...EMPTY_BOOKING_FORM, ...initialValues };
-  const [paymentType, setPaymentType] = useState<"EFECTIVO" | "TRANSFERENCIA">(
-    values.paymentType,
+  const [depositPaymentType, setDepositPaymentType] = useState<PaymentTypeValue>(
+    values.depositPaymentType,
   );
+  const [restPaymentType, setRestPaymentType] = useState<PaymentTypeValue>(
+    values.restPaymentType,
+  );
+  const [pricePerNight, setPricePerNight] = useState(values.pricePerNight);
+  const [depositAmount, setDepositAmount] = useState(values.depositAmount);
+  const [checkInDate, setCheckInDate] = useState(values.checkInDate);
+  const [checkInTime, setCheckInTime] = useState(values.checkInTime);
+  const [checkOutDate, setCheckOutDate] = useState(values.checkOutDate);
+  const [checkOutTime, setCheckOutTime] = useState(values.checkOutTime);
   const fieldErrors = state.fieldErrors ?? {};
-  const isTransferencia = paymentType === "TRANSFERENCIA";
+
+  // Live summary: total and rest derived from the current inputs. Incomplete
+  // dates show a dash instead of a number.
+  const price = parseMoney(pricePerNight);
+  const deposit = parseMoney(depositAmount);
+  const hasStay =
+    checkInDate !== "" &&
+    checkOutDate !== "" &&
+    toUtc(checkInDate, checkInTime).getTime() <
+      toUtc(checkOutDate, checkOutTime).getTime();
+  const total =
+    price > 0 && hasStay
+      ? price *
+        stayNights(
+          toUtc(checkInDate, checkInTime),
+          toUtc(checkOutDate, checkOutTime),
+        )
+      : null;
+  const rest = total === null ? null : Math.max(0, total - deposit);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -137,7 +194,8 @@ export function BookingForm({
             name="checkInDate"
             type="date"
             required
-            defaultValue={values.checkInDate}
+            value={checkInDate}
+            onChange={(event) => setCheckInDate(event.target.value)}
           />
         </AdminField>
         <AdminField label="Hora de ingreso" htmlFor="checkInTime" error={fieldErrors.checkInTime}>
@@ -146,7 +204,8 @@ export function BookingForm({
             id="checkInTime"
             name="checkInTime"
             required
-            defaultValue={values.checkInTime}
+            value={checkInTime}
+            onChange={(event) => setCheckInTime(event.target.value)}
           >
             {TIME_SLOTS.map((slot) => (
               <option key={slot} value={slot}>
@@ -161,7 +220,8 @@ export function BookingForm({
             name="checkOutDate"
             type="date"
             required
-            defaultValue={values.checkOutDate}
+            value={checkOutDate}
+            onChange={(event) => setCheckOutDate(event.target.value)}
           />
         </AdminField>
         <AdminField label="Hora de egreso" htmlFor="checkOutTime" error={fieldErrors.checkOutTime}>
@@ -170,7 +230,8 @@ export function BookingForm({
             id="checkOutTime"
             name="checkOutTime"
             required
-            defaultValue={values.checkOutTime}
+            value={checkOutTime}
+            onChange={(event) => setCheckOutTime(event.target.value)}
           >
             {TIME_SLOTS.map((slot) => (
               <option key={slot} value={slot}>
@@ -189,7 +250,8 @@ export function BookingForm({
             type="number"
             step="0.01"
             min={0}
-            defaultValue={values.pricePerNight}
+            value={pricePerNight}
+            onChange={(event) => setPricePerNight(event.target.value)}
           />
         </AdminField>
         <AdminField label="Seña" htmlFor="depositAmount" error={fieldErrors.depositAmount}>
@@ -199,55 +261,121 @@ export function BookingForm({
             type="number"
             step="0.01"
             min={0}
-            defaultValue={values.depositAmount}
+            value={depositAmount}
+            onChange={(event) => setDepositAmount(event.target.value)}
           />
         </AdminField>
+      </div>
+
+      <div className="rounded-sm border border-hairline bg-surface-soft px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm text-muted">Monto total de la reserva</span>
+          <span className="text-body-sm font-semibold text-ink">
+            {total === null ? "—" : formatMoney(total)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm text-muted">Monto a pagar</span>
+          <span className="text-body-sm font-semibold text-ink">
+            {rest === null ? "—" : formatMoney(rest)}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <AdminField label="Tipo de pago" htmlFor="paymentType" error={fieldErrors.paymentType}>
-          <AdminInput
-            as="select"
-            id="paymentType"
-            name="paymentType"
-            value={paymentType}
-            onChange={(event) =>
-              setPaymentType(event.target.value as "EFECTIVO" | "TRANSFERENCIA")
-            }
-          >
-            <option value="EFECTIVO">Efectivo</option>
-            <option value="TRANSFERENCIA">Transferencia</option>
-          </AdminInput>
-        </AdminField>
-        <AdminField label="Método de pago" htmlFor="paymentMethod" error={fieldErrors.paymentMethod}>
-          <AdminInput
-            id="paymentMethod"
-            name="paymentMethod"
-            type="text"
-            defaultValue={values.paymentMethod}
-          />
-          <p className="mt-1 text-caption-sm text-muted">Opcional.</p>
-        </AdminField>
-      </div>
+        <fieldset className="rounded-sm border border-hairline p-4">
+          <legend className="px-1 text-caption-sm font-semibold text-ink">
+            Pago de la seña
+          </legend>
+          <div className="space-y-4">
+            <AdminField
+              label="Tipo de pago"
+              htmlFor="depositPaymentType"
+              error={fieldErrors.depositPaymentType}
+            >
+              <AdminInput
+                as="select"
+                id="depositPaymentType"
+                name="depositPaymentType"
+                value={depositPaymentType}
+                onChange={(event) =>
+                  setDepositPaymentType(
+                    event.target.value as PaymentTypeValue,
+                  )
+                }
+              >
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+              </AdminInput>
+            </AdminField>
+            <AdminField
+              label="Detalle"
+              htmlFor="depositPaymentMethod"
+              error={fieldErrors.depositPaymentMethod}
+            >
+              <AdminInput
+                id="depositPaymentMethod"
+                name="depositPaymentMethod"
+                type="text"
+                defaultValue={values.depositPaymentMethod}
+              />
+              <p className="mt-1 text-caption-sm text-muted">Opcional.</p>
+            </AdminField>
+            {depositPaymentType === "TRANSFERENCIA" && (
+              <AdminField
+                label="Destinatario"
+                htmlFor="depositRecipientId"
+                error={fieldErrors.depositRecipientId}
+              >
+                {recipientSelect(
+                  "depositRecipientId",
+                  recipients,
+                  values.depositRecipientId,
+                )}
+              </AdminField>
+            )}
+          </div>
+        </fieldset>
 
-      {isTransferencia && (
-        <AdminField label="Destinatario" htmlFor="recipientId" error={fieldErrors.recipientId}>
-          <AdminInput
-            as="select"
-            id="recipientId"
-            name="recipientId"
-            required
-            defaultValue={values.recipientId}
-          >
-            <option value="">Seleccionar destinatario…</option>
-            {recipients.map((recipient) => (
-              <option key={recipient.id} value={recipient.id}>
-                {recipient.name}
-              </option>
-            ))}
-          </AdminInput>
-        </AdminField>
-      )}
+        <fieldset className="rounded-sm border border-hairline p-4">
+          <legend className="px-1 text-caption-sm font-semibold text-ink">
+            Pago del monto a pagar
+          </legend>
+          <div className="space-y-4">
+            <AdminField
+              label="Tipo de pago"
+              htmlFor="restPaymentType"
+              error={fieldErrors.restPaymentType}
+            >
+              <AdminInput
+                as="select"
+                id="restPaymentType"
+                name="restPaymentType"
+                value={restPaymentType}
+                onChange={(event) =>
+                  setRestPaymentType(event.target.value as PaymentTypeValue)
+                }
+              >
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+              </AdminInput>
+            </AdminField>
+            {restPaymentType === "TRANSFERENCIA" && (
+              <AdminField
+                label="Destinatario"
+                htmlFor="restRecipientId"
+                error={fieldErrors.restRecipientId}
+              >
+                {recipientSelect(
+                  "restRecipientId",
+                  recipients,
+                  values.restRecipientId,
+                )}
+              </AdminField>
+            )}
+          </div>
+        </fieldset>
+      </div>
 
       <AdminField label="Notas" htmlFor="notes" error={fieldErrors.notes}>
         <AdminInput

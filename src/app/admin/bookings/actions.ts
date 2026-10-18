@@ -40,10 +40,12 @@ function buildBookingInput(formData: FormData): Record<string, unknown> {
     checkOutTime: text("checkOutTime"),
     pricePerNight: number("pricePerNight"),
     depositAmount: number("depositAmount"),
-    paymentType: text("paymentType") as "EFECTIVO" | "TRANSFERENCIA",
-    paymentMethod: text("paymentMethod"),
+    depositPaymentType: text("depositPaymentType") as "EFECTIVO" | "TRANSFERENCIA",
+    depositPaymentMethod: text("depositPaymentMethod"),
+    depositRecipientId: text("depositRecipientId"),
+    restPaymentType: text("restPaymentType") as "EFECTIVO" | "TRANSFERENCIA",
+    restRecipientId: text("restRecipientId"),
     notes: text("notes"),
-    recipientId: text("recipientId"),
   };
 }
 
@@ -87,10 +89,12 @@ function toPrismaData(data: BookingInput) {
     checkOut: toUtc(data.checkOutDate, data.checkOutTime),
     pricePerNight: data.pricePerNight,
     depositAmount: data.depositAmount,
-    paymentType: data.paymentType,
-    paymentMethod: data.paymentMethod || null,
+    depositPaymentType: data.depositPaymentType,
+    depositPaymentMethod: data.depositPaymentMethod || null,
+    depositTransferRecipientId: data.depositRecipientId ?? null,
+    restPaymentType: data.restPaymentType,
+    restTransferRecipientId: data.restRecipientId ?? null,
     notes: data.notes || null,
-    transferRecipientId: data.recipientId ?? null,
   };
 }
 

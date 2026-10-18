@@ -64,7 +64,12 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
       // Structured filters go to the database; the text query `q` is applied
       // in TypeScript below (accent-insensitive via normalizeForSearch).
       where: hasStructuredFilters ? where : undefined,
-      include: { property: true, transferRecipient: true, guest: true },
+      include: {
+        property: true,
+        depositTransferRecipient: true,
+        restTransferRecipient: true,
+        guest: true,
+      },
       orderBy: { checkIn: "desc" },
     }),
     getAllPropertiesForAdmin(),
@@ -165,16 +170,22 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
           <table className="w-full">
             <thead>
               <tr className="bg-surface-soft text-left">
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Propiedad</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Huésped</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">DNI</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Noches</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Precio por noche</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Seña</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Propiedad</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Huésped</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">DNI</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Ingreso</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Egreso</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Noches</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Precio/noche</th>
+                <th colSpan={2} className="border-b border-hairline px-3 py-3 text-center text-caption-sm font-semibold text-ink">Seña</th>
+                <th colSpan={2} className="border-b border-hairline px-3 py-3 text-center text-caption-sm font-semibold text-ink">A pagar</th>
+                <th rowSpan={2} className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
+              </tr>
+              <tr className="bg-surface-soft text-left">
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Importe</th>
                 <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Pago</th>
-                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Importe</th>
+                <th className="border-b border-hairline px-3 py-3 text-caption-sm font-semibold text-ink">Pago</th>
               </tr>
             </thead>
             <tbody>
@@ -199,8 +210,20 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                       : "—"}
                   </td>
                   <td className={tableCellClasses}>
-                    {booking.paymentType === "TRANSFERENCIA"
-                      ? `Transferencia${booking.transferRecipient ? ` · ${booking.transferRecipient.name}` : ""}`
+                    {booking.depositPaymentType === "TRANSFERENCIA"
+                      ? `Transferencia${booking.depositTransferRecipient ? ` · ${booking.depositTransferRecipient.name}` : ""}`
+                      : "Efectivo"}
+                  </td>
+                  <td className={`${tableCellClasses} whitespace-nowrap`}>
+                    {formatMoney(
+                      Number(booking.pricePerNight) *
+                        stayNights(booking.checkIn, booking.checkOut) -
+                        Number(booking.depositAmount),
+                    )}
+                  </td>
+                  <td className={tableCellClasses}>
+                    {booking.restPaymentType === "TRANSFERENCIA"
+                      ? `Transferencia${booking.restTransferRecipient ? ` · ${booking.restTransferRecipient.name}` : ""}`
                       : "Efectivo"}
                   </td>
                   <td className={tableCellClasses}>

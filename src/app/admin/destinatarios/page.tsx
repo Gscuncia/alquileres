@@ -26,10 +26,15 @@ export default async function DestinatariosPage({
 }: DestinatariosPageProps) {
   await requireAdmin();
 
-  const [recipients, editingRecipient] = await Promise.all([
+  const [recipientRows, editingRecipient] = await Promise.all([
     prisma.transferRecipient.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { bookings: true } } },
+      // A booking may reference the recipient in both payment parts; the
+      // association count is the DISTINCT union of both relation sets.
+      include: {
+        depositBookings: { select: { id: true } },
+        restBookings: { select: { id: true } },
+      },
     }),
     searchParams?.destinatario
       ? prisma.transferRecipient.findUnique({
@@ -37,6 +42,12 @@ export default async function DestinatariosPage({
         })
       : Promise.resolve(null),
   ]);
+
+  const recipients = recipientRows.map(({ depositBookings, restBookings, ...recipient }) => ({
+    ...recipient,
+    bookingsCount:
+      new Set([...depositBookings, ...restBookings].map((b) => b.id)).size,
+  }));
 
   const deleteBlocked = searchParams?.error === "reservas";
   const editing = editingRecipient ?? null;
@@ -92,7 +103,7 @@ export default async function DestinatariosPage({
               {recipients.map((recipient) => (
                 <tr key={recipient.id}>
                   <td className={`${tableCellClasses} text-ink`}>{recipient.name}</td>
-                  <td className={tableCellClasses}>{recipient._count.bookings}</td>
+                  <td className={tableCellClasses}>{recipient.bookingsCount}</td>
                   <td className={tableCellClasses}>
                     <div className="flex items-center gap-3">
                       <Button asChild variant="tertiary">

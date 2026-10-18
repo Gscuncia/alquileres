@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { toUtc } from "@/lib/datetime";
+import { toUtc, stayNights } from "@/lib/datetime";
 
 const requiredText = (message: string) =>
   z
@@ -50,12 +50,20 @@ export const bookingSchema = z
       })
       .min(0, { message: "El importe de la seña debe ser mayor o igual a 0." })
       .default(0),
-    paymentType: z.enum(["EFECTIVO", "TRANSFERENCIA"], {
-      errorMap: () => ({ message: "El tipo de pago es obligatorio." }),
+    depositPaymentType: z.enum(["EFECTIVO", "TRANSFERENCIA"], {
+      errorMap: () => ({
+        message: "El tipo de pago de la seña es obligatorio.",
+      }),
     }),
-    paymentMethod: z.string().trim().optional(),
+    depositPaymentMethod: z.string().trim().optional(),
+    depositRecipientId: z.string().trim().optional(),
+    restPaymentType: z.enum(["EFECTIVO", "TRANSFERENCIA"], {
+      errorMap: () => ({
+        message: "El tipo de pago del monto a pagar es obligatorio.",
+      }),
+    }),
+    restRecipientId: z.string().trim().optional(),
     notes: z.string().trim().optional(),
-    recipientId: z.string().trim().optional(),
   })
   .superRefine((data, ctx) => {
     const checkIn = toUtc(data.checkInDate, data.checkInTime);
@@ -70,21 +78,50 @@ export const bookingSchema = z
     }
 
     if (
-      data.paymentType === "TRANSFERENCIA" &&
-      !data.recipientId
+      data.depositPaymentType === "TRANSFERENCIA" &&
+      !data.depositRecipientId
     ) {
       ctx.addIssue({
         code: "custom",
-        path: ["recipientId"],
-        message: "El destinatario es obligatorio para pagos por transferencia.",
+        path: ["depositRecipientId"],
+        message:
+          "El destinatario es obligatorio para la seña por transferencia.",
       });
+    }
+
+    if (data.restPaymentType === "TRANSFERENCIA" && !data.restRecipientId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["restRecipientId"],
+        message:
+          "El destinatario es obligatorio para el monto a pagar por transferencia.",
+      });
+    }
+
+    // The deposit can never exceed the stay total; the nights math is only
+    // meaningful when the stay itself is valid.
+    if (checkIn.getTime() < checkOut.getTime()) {
+      const total = data.pricePerNight * stayNights(checkIn, checkOut);
+      if (data.depositAmount > total) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["depositAmount"],
+          message: "La seña no puede superar el monto total de la reserva.",
+        });
+      }
     }
   })
   .transform((data) => ({
     ...data,
     // EFECTIVO never persists a recipient; TRANSFERENCIA keeps the chosen one.
-    recipientId:
-      data.paymentType === "TRANSFERENCIA" ? data.recipientId || undefined : undefined,
+    depositRecipientId:
+      data.depositPaymentType === "TRANSFERENCIA"
+        ? data.depositRecipientId || undefined
+        : undefined,
+    restRecipientId:
+      data.restPaymentType === "TRANSFERENCIA"
+        ? data.restRecipientId || undefined
+        : undefined,
   }));
 
 export type BookingInput = z.output<typeof bookingSchema>;

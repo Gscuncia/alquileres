@@ -51,10 +51,12 @@ interface CalendarioBookingLike {
   checkOut: Date;
   pricePerNight: unknown;
   depositAmount: unknown;
-  paymentType: "EFECTIVO" | "TRANSFERENCIA";
-  paymentMethod: string | null;
+  depositPaymentType: "EFECTIVO" | "TRANSFERENCIA";
+  depositPaymentMethod: string | null;
+  depositTransferRecipientId: string | null;
+  restPaymentType: "EFECTIVO" | "TRANSFERENCIA";
+  restTransferRecipientId: string | null;
   notes: string | null;
-  transferRecipientId: string | null;
 }
 
 function booking(overrides: Partial<CalendarioBookingLike>): CalendarioBookingLike {
@@ -67,10 +69,12 @@ function booking(overrides: Partial<CalendarioBookingLike>): CalendarioBookingLi
     checkOut: new Date("2026-10-13T10:00:00-03:00"),
     pricePerNight: 150,
     depositAmount: 0,
-    paymentType: "EFECTIVO",
-    paymentMethod: null,
+    depositPaymentType: "EFECTIVO",
+    depositPaymentMethod: null,
+    depositTransferRecipientId: null,
+    restPaymentType: "EFECTIVO",
+    restTransferRecipientId: null,
     notes: null,
-    transferRecipientId: null,
     ...overrides,
   };
 }

@@ -63,7 +63,7 @@ describe("BookingForm payment split", () => {
     renderForm();
 
     expect(screen.getByText("Pago de la seña")).toBeInTheDocument();
-    expect(screen.getByText("Pago del monto a pagar")).toBeInTheDocument();
+    expect(screen.getByText("Pago restante")).toBeInTheDocument();
     // Each group owns its own tipo de pago select.
     expect(paymentTypeSelect("depositPaymentType")).toBeDefined();
     expect(paymentTypeSelect("restPaymentType")).toBeDefined();

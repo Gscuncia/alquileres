@@ -267,21 +267,6 @@ export function BookingForm({
         </AdminField>
       </div>
 
-      <div className="rounded-sm border border-hairline bg-surface-soft px-4 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-body-sm text-muted">Monto total de la reserva</span>
-          <span className="text-body-sm font-semibold text-ink">
-            {total === null ? "—" : formatMoney(total)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-body-sm text-muted">Monto a pagar</span>
-          <span className="text-body-sm font-semibold text-ink">
-            {rest === null ? "—" : formatMoney(rest)}
-          </span>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <fieldset className="rounded-sm border border-hairline p-4">
           <legend className="px-1 text-caption-sm font-semibold text-ink">
@@ -339,7 +324,7 @@ export function BookingForm({
 
         <fieldset className="rounded-sm border border-hairline p-4">
           <legend className="px-1 text-caption-sm font-semibold text-ink">
-            Pago del monto a pagar
+            Pago restante
           </legend>
           <div className="space-y-4">
             <AdminField
@@ -387,6 +372,21 @@ export function BookingForm({
         />
         <p className="mt-1 text-caption-sm text-muted">Opcional.</p>
       </AdminField>
+
+      <div className="rounded-sm border border-hairline bg-surface-soft px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm text-muted">Monto total de la reserva</span>
+          <span className="text-body-sm font-semibold text-ink">
+            {total === null ? "—" : formatMoney(total)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm text-muted">Monto a pagar</span>
+          <span className="text-body-sm font-semibold text-ink">
+            {rest === null ? "—" : formatMoney(rest)}
+          </span>
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <Button type="submit" variant="primary">

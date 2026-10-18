@@ -154,16 +154,6 @@ export function occupancyPerProperty(
 }
 
 /**
- * Sum of depositAmount of bookings whose deposit is not settled
- * (`settledAt === null`). Callers pass only the bookings inside the period.
- */
-export function pendingDeposits(bookings: BookingSnapshot[]): number {
-  return bookings
-    .filter((booking) => booking.settledAt === null)
-    .reduce((total, booking) => total + booking.depositAmount, 0);
-}
-
-/**
  * Check-ins and check-outs (each an instant) falling inside the next
  * `days` days from `now`, sorted chronologically. A short stay can appear
  * in both lists.

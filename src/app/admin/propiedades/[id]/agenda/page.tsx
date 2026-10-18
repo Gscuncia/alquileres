@@ -2,38 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import { toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
-import {
-  CalendarGrid,
-  type CalendarEvent,
-} from "@/components/admin/CalendarGrid";
+import { toDateStr, toTimeStr } from "@/lib/datetime";
 import { BookingForm, type BookingFormValues } from "@/components/admin/BookingForm";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { AdminPanel, AdminPageHeader } from "@/components/admin/primitives";
 import { Button } from "@/components/design-system";
 import { createBooking, deleteBooking, updateBooking } from "@/app/admin/bookings/actions";
 
-const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 interface AgendaPageProps {
   params: { id: string };
-  searchParams?: { mes?: string; reserva?: string; fecha?: string };
-}
-
-function monthBounds(month: string): { start: Date; end: Date } {
-  const year = Number(month.slice(0, 4));
-  const monthIndex = Number(month.slice(5, 7)) - 1;
-  const firstNextMonth = new Date(year, monthIndex + 1, 1);
-  return {
-    start: toUtc(`${month}-01`, "00:00"),
-    end: toUtc(
-      `${firstNextMonth.getFullYear()}-${String(
-        firstNextMonth.getMonth() + 1,
-      ).padStart(2, "0")}-01`,
-      "00:00",
-    ),
-  };
+  searchParams?: { reserva?: string; fecha?: string };
 }
 
 function toFormValues(
@@ -85,21 +65,14 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
   }
 
   const basePath = `/admin/propiedades/${property.id}/agenda`;
-  const month =
-    searchParams?.mes && VALID_MONTH.test(searchParams.mes)
-      ? searchParams.mes
-      : toDateStr(new Date()).slice(0, 7);
-  const { start, end } = monthBounds(month);
-  const monthParam = `?mes=${month}`;
+  const currentPath = basePath;
 
+  // The agenda lists every booking of the property; month filtering and the
+  // monthly grid belong to the Calendario tab.
   const [bookings, editingBooking, recipients, guests] = await Promise.all([
     prisma.booking.findMany({
-      where: {
-        propertyId: property.id,
-        checkIn: { lt: end },
-        checkOut: { gt: start },
-      },
-      orderBy: { checkIn: "asc" },
+      where: { propertyId: property.id },
+      orderBy: { checkIn: "desc" },
       include: { guest: true },
     }),
     searchParams?.reserva
@@ -116,15 +89,6 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
 
   // Only a booking of this property may be edited here.
   const editing = editingBooking?.propertyId === property.id ? editingBooking : null;
-
-  const calendarEvents: CalendarEvent[] = bookings.map((booking) => ({
-    id: booking.id,
-    guest: { firstName: booking.guest.firstName, lastName: booking.guest.lastName },
-    property: { id: property.id, title: property.title },
-    checkIn: booking.checkIn,
-    checkOut: booking.checkOut,
-  }));
-  const currentPath = `${basePath}${monthParam}`;
 
   // Day-click prefill: `?fecha=YYYY-MM-DD` starts a create form on that day
   // with the default times; without it the form defaults to today.
@@ -145,16 +109,6 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
           Agenda: {property.title}
         </h2>
       </div>
-
-      <CalendarGrid
-        month={month}
-        events={calendarEvents}
-        properties={[{ id: property.id, title: property.title, color: property.color }]}
-        mode="single"
-        chipHref={(bookingId) => `${basePath}${monthParam}&reserva=${bookingId}`}
-        dayHref={(dayStr) => `${basePath}?fecha=${dayStr}`}
-        showMonthList
-      />
 
       <AdminPanel>
         <div className="space-y-4">
@@ -188,7 +142,7 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
         <AdminPanel>
           <div className="space-y-3">
             <h3 className="text-title-md font-semibold text-ink">
-              Reservas del mes
+              Reservas de la propiedad
             </h3>
             <ul className="divide-y divide-hairline rounded-md border border-hairline">
               {bookings.map((booking) => (

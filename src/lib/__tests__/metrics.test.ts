@@ -6,7 +6,6 @@ import {
   nightsInPeriod,
   revenuePerProperty,
   occupancyPerProperty,
-  pendingDeposits,
   upcomingMoves,
   monthlyTrend,
   expensesTotal,
@@ -156,23 +155,6 @@ describe("occupancyPerProperty", () => {
     const occupancy = occupancyPerProperty([booking()], from, from, 0);
 
     expect(occupancy.size).toBe(0);
-  });
-});
-
-describe("pendingDeposits", () => {
-  it("sums $50 + $20 = $70 for unsettled deposits and excludes settled ones", () => {
-    const pending = pendingDeposits([
-      booking({ depositAmount: 50 }),
-      booking({ id: "b-2", depositAmount: 20 }),
-      booking({ id: "b-3", depositAmount: 30, settledAt: toUtc("2026-10-02", "10:00") }),
-      booking({ id: "b-4", depositAmount: 10, settledAt: new Date() }),
-    ]);
-
-    expect(pending).toBe(70);
-  });
-
-  it("returns 0 (never an error) for zero bookings", () => {
-    expect(pendingDeposits([])).toBe(0);
   });
 });
 

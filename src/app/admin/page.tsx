@@ -7,7 +7,6 @@ import {
   formatMoney,
   nightsInPeriod,
   occupancyPerProperty,
-  pendingDeposits,
   revenuePerProperty,
   monthlyTrend,
   upcomingMoves,
@@ -136,7 +135,6 @@ export default async function AdminDashboardPage({
     toInstant,
     periodNights,
   );
-  const pending = pendingDeposits(bookings);
   const moves = upcomingMoves(moveBookings, now);
   const trend = monthlyTrend(
     trendRows.map(toBookingSnapshot),
@@ -181,15 +179,7 @@ export default async function AdminDashboardPage({
         </div>
       </form>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <AdminPanel title="Señas pendientes">
-          <p className="text-display-sm font-semibold text-ink">
-            {formatMoney(pending)}
-          </p>
-          <p className="mt-1 text-caption-sm text-muted">
-            Depositado a cuenta de reservas del período.
-          </p>
-        </AdminPanel>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AdminPanel title="Ingresos del período">
           <p className="text-display-sm font-semibold text-ink">
             {formatMoney(totalRevenue)}

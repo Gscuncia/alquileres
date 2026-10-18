@@ -130,7 +130,7 @@ describe("AdminDashboardPage", () => {
     );
   });
 
-  it("renders revenue, occupancy, pending deposits and expenses vs revenue for the selected period", async () => {
+  it("renders revenue, occupancy and expenses vs revenue for the selected period", async () => {
     // Booking windows in call order: 1) period, 2) moves, 3) trend.
     mocks.bookingFindMany
       .mockResolvedValueOnce(periodBookings)
@@ -166,9 +166,9 @@ describe("AdminDashboardPage", () => {
     expect(deptoRow).toHaveTextContent("40%");
     expect(casitaRow).toHaveTextContent("60%");
 
-    // Pending deposits: 50 + 20 = $70 (settled ones excluded is asserted at
-    // unit level; both fixtures are unsettled here).
-    expect(screen.getByText(/^\$\s*70,00$/)).toBeInTheDocument();
+    // The "Señas pendientes" concept was removed: deposits are paid upfront.
+    expect(screen.queryByText(/señas pendientes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\$\s*70,00$/)).not.toBeInTheDocument();
 
     // Expenses vs revenue for the period: 200 expenses, 960 revenue, 760 net.
     // Total revenue appears in both the "Ingresos del período" card and the

@@ -37,7 +37,7 @@ vi.mock("react-dom", async (importOriginal) => {
 });
 
 import AgendaPage from "@/app/admin/propiedades/[id]/agenda/page";
-import { formatInTz, toUtc, toDateStr } from "@/lib/datetime";
+import { toDateStr } from "@/lib/datetime";
 
 interface AgendaBookingLike {
   id: string;
@@ -94,85 +94,25 @@ describe("AgendaPage", () => {
     mocks.findBookings.mockResolvedValue([booking({})]);
   });
 
-  it("swaps to single-mode CalendarGrid: stay chips + covered days + month list", async () => {
+  it("lists every booking of the property without the monthly calendar grid", async () => {
     await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
-        searchParams: { mes: "2026-10" },
+        searchParams: {},
       }),
     );
 
-    // Arrow chips on the check-in / check-out BA days.
-    expect(screen.getByText(/→ 12:00 Juan/)).toBeInTheDocument();
-    expect(screen.getByText(/← 10:00 Juan/)).toBeInTheDocument();
+    // The monthly grid lives in the Calendario tab; the agenda has no grid.
+    expect(document.querySelector('[role="grid"]')).toBeNull();
 
-    // The month booking list (showMonthList) shows the stay with its window.
+    // The complete booking list of the property renders.
     expect(
-      screen.getByText(
-        `Juan Pérez — ${formatInTz(booking({}).checkIn)} → ${formatInTz(booking({}).checkOut)}`,
-      ),
+      screen.getByText(/reservas de la propiedad/i),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Juan Pérez · \$/)).toBeInTheDocument();
   });
 
-  it("agenda chip opens booking edit via chipHref keeping the agenda ?reserva= target", async () => {
-    await render(
-      await AgendaPage({
-        params: { id: "p-depto-1" },
-        searchParams: { mes: "2026-10" },
-      }),
-    );
-
-    expect(
-      screen.getByText(/→ 12:00 Juan/).closest("a"),
-    ).toHaveAttribute(
-      "href",
-      "/admin/propiedades/p-depto-1/agenda?mes=2026-10&reserva=b-1",
-    );
-  });
-
-  it("agenda day link targets dayHref with fecha prefill", async () => {
-    await render(
-      await AgendaPage({
-        params: { id: "p-depto-1" },
-        searchParams: { mes: "2026-10" },
-      }),
-    );
-
-    expect(screen.getByText("10").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/propiedades/p-depto-1/agenda?fecha=2026-10-10",
-    );
-  });
-
-  it("paints a small accent bar on intermediate days only", async () => {
-    const { container } = await render(
-      await AgendaPage({
-        params: { id: "p-depto-1" },
-        searchParams: { mes: "2026-10" },
-      }),
-    );
-
-    // Stay Oct 10 12:00 → Oct 13 10:00: bars only on Oct 11..12
-    // (the arrow chips already mark the 10 and 13 endpoints).
-    // Oct 1 2026 is a Thursday → Monday-first leading blanks = 3.
-    const grid = container.querySelector('[role="grid"]') as HTMLElement;
-    const cellOf = (day: number): HTMLElement =>
-      grid.children[7 + 3 + day - 1] as HTMLElement;
-
-    const barOf = (day: number): HTMLElement | null =>
-      cellOf(day).querySelector("a.h-2") as HTMLElement | null;
-
-    for (const day of [11, 12]) {
-      expect(barOf(day)).not.toBeNull();
-      expect(barOf(day)?.className).toContain("bg-sky");
-    }
-    expect(barOf(10)).toBeNull();
-    expect(barOf(13)).toBeNull();
-    expect(barOf(9)).toBeNull();
-    expect(barOf(14)).toBeNull();
-  });
-
-  it("shows back-to-back stays together without a conflict indication", async () => {
+  it("shows back-to-back stays together in the property list", async () => {
     const stayA = booking({ id: "b-a", checkOut: new Date("2026-10-13T10:00:00-03:00") });
     const stayB = booking({
       id: "b-b",
@@ -184,32 +124,25 @@ describe("AgendaPage", () => {
     await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
-        searchParams: { mes: "2026-10" },
+        searchParams: {},
       }),
     );
 
-    // Both stays are listed (calendar entries included); the calendar has no
-    // conflict state to signal — back-to-back is treated like any other stay.
     expect(screen.getByText(/Juan Pérez · \$/)).toBeInTheDocument();
     expect(screen.getByText(/María López · \$/)).toBeInTheDocument();
   });
 
-  it("queries the property's bookings for the requested month window including the guest", async () => {
+  it("queries ALL the property's bookings including the guest, newest first", async () => {
     await render(
       await AgendaPage({
         params: { id: "p-depto-1" },
-        searchParams: { mes: "2026-10" },
+        searchParams: {},
       }),
     );
 
     const call = mocks.findBookings.mock.calls[0][0];
-    expect(call.where.propertyId).toBe("p-depto-1");
-    expect(call.where.checkIn.lt.toISOString()).toBe(
-      toUtc("2026-11-01", "00:00").toISOString(),
-    );
-    expect(call.where.checkOut.gt.toISOString()).toBe(
-      toUtc("2026-10-01", "00:00").toISOString(),
-    );
+    expect(call.where).toEqual({ propertyId: "p-depto-1" });
+    expect(call.orderBy).toEqual({ checkIn: "desc" });
     expect(call.include).toEqual({ guest: true });
   });
 

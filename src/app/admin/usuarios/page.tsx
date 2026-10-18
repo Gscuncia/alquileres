@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/require-auth";
-import { createUser } from "@/app/admin/usuarios/actions";
+import { createUser, updateContactSettings } from "@/app/admin/usuarios/actions";
 import { UserForm } from "@/components/admin/UserForm";
+import { ContactSettingsForm } from "@/components/admin/ContactSettingsForm";
 import { DeleteUserButton } from "@/components/admin/DeleteUserButton";
+import { getContactSettings } from "@/lib/site-settings";
 import {
   AdminPanel,
   AdminEmptyState,
@@ -29,12 +31,13 @@ function formatName(user: {
 export default async function UsuariosPage({ searchParams }: UsuariosPageProps) {
   const session = await requirePermission("usuarios");
 
-  const [users, roles] = await Promise.all([
+  const [users, roles, contactSettings] = await Promise.all([
     prisma.user.findMany({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       include: { role: true },
     }),
     prisma.role.findMany({ orderBy: { name: "asc" } }),
+    getContactSettings(),
   ]);
 
   return (
@@ -57,6 +60,14 @@ export default async function UsuariosPage({ searchParams }: UsuariosPageProps) 
           </h3>
           <UserForm action={createUser} roles={roles} />
         </div>
+      </AdminPanel>
+
+      <AdminPanel title="Configuración de contacto">
+        <ContactSettingsForm
+          action={updateContactSettings}
+          initialInquiryEmail={contactSettings.inquiryEmail}
+          initialWhatsappPhone={contactSettings.whatsappPhone}
+        />
       </AdminPanel>
 
       {users.length === 0 ? (

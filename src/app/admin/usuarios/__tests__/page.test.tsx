@@ -5,10 +5,15 @@ const mocks = vi.hoisted(() => ({
   requirePermission: vi.fn(),
   userFindMany: vi.fn(),
   roleFindMany: vi.fn(),
+  getContactSettings: vi.fn(),
 }));
 
 vi.mock("@/lib/require-auth", () => ({
   requirePermission: (tab?: string) => mocks.requirePermission(tab),
+}));
+
+vi.mock("@/lib/site-settings", () => ({
+  getContactSettings: () => mocks.getContactSettings(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -24,6 +29,21 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/components/admin/UserForm", () => ({
   UserForm: () => <div data-testid="user-form" />,
+}));
+
+vi.mock("@/components/admin/ContactSettingsForm", () => ({
+  ContactSettingsForm: ({
+    initialInquiryEmail,
+    initialWhatsappPhone,
+  }: {
+    initialInquiryEmail: string;
+    initialWhatsappPhone: string;
+  }) => (
+    <div data-testid="contact-settings-form">
+      <input data-testid="inquiry-email-input" defaultValue={initialInquiryEmail} readOnly />
+      <input data-testid="whatsapp-phone-input" defaultValue={initialWhatsappPhone} readOnly />
+    </div>
+  ),
 }));
 
 vi.mock("@/components/admin/DeleteUserButton", () => ({
@@ -66,6 +86,10 @@ describe("UsuariosPage", () => {
     });
     mocks.userFindMany.mockResolvedValue(users);
     mocks.roleFindMany.mockResolvedValue([adminRole, operativeRole]);
+    mocks.getContactSettings.mockResolvedValue({
+      inquiryEmail: "contacto@alquileresanita.com.ar",
+      whatsappPhone: "5491155052228",
+    });
   });
 
   it("requires the usuarios tab permission", async () => {
@@ -121,5 +145,20 @@ describe("UsuariosPage", () => {
     expect(
       screen.queryByTestId("delete-user-user-1"),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders the contact settings panel with prefilled inputs", async () => {
+    render(await UsuariosPage({ searchParams: {} }));
+
+    expect(
+      screen.getByRole("heading", { name: "Configuración de contacto" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("contact-settings-form")).toBeInTheDocument();
+
+    const inquiryInput = screen.getByTestId("inquiry-email-input") as HTMLInputElement;
+    expect(inquiryInput.value).toBe("contacto@alquileresanita.com.ar");
+
+    const whatsappInput = screen.getByTestId("whatsapp-phone-input") as HTMLInputElement;
+    expect(whatsappInput.value).toBe("5491155052228");
   });
 });

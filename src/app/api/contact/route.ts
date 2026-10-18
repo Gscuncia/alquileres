@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { getContactSettings } from "@/lib/site-settings";
 
 export async function POST(request: Request) {
   try {
@@ -15,9 +16,9 @@ export async function POST(request: Request) {
 
     const gmailUser = process.env.GMAIL_USER;
     const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
-    const contactEmail = process.env.CONTACT_EMAIL;
+    const { inquiryEmail } = await getContactSettings();
 
-    if (!gmailUser || !gmailAppPassword || !contactEmail) {
+    if (!gmailUser || !gmailAppPassword || !inquiryEmail) {
       return NextResponse.json(
         { error: "Configuración de email incompleta" },
         { status: 500 }
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
     await transporter.sendMail({
       from: `"Alquileres Anita" <${gmailUser}>`,
-      to: contactEmail,
+      to: inquiryEmail,
       replyTo: email,
       subject: `Nueva consulta de ${name}`,
       text: `Nombre: ${name}\nTeléfono: ${phone || "No proporcionado"}\nEmail: ${email}\n\nMensaje:\n${message}`,

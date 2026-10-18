@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   userCreate: vi.fn(),
   userDelete: vi.fn(),
   roleFindUnique: vi.fn(),
+  siteSettingsUpsert: vi.fn(),
   bcryptHash: vi.fn(),
   sendWelcomeEmail: vi.fn(),
 }));
@@ -23,11 +24,17 @@ vi.mock("@/lib/prisma", () => ({
     role: {
       findUnique: mocks.roleFindUnique,
     },
+    siteSettings: {
+      upsert: mocks.siteSettingsUpsert,
+    },
   },
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: (path: string) => mocks.revalidatePath(path),
+  revalidatePath: (path: string, type?: string) =>
+    type === undefined
+      ? mocks.revalidatePath(path)
+      : mocks.revalidatePath(path, type),
 }));
 
 vi.mock("bcryptjs", () => ({
@@ -40,7 +47,7 @@ vi.mock("@/lib/mail", () => ({
   sendWelcomeEmail: (...args: [string, string]) => mocks.sendWelcomeEmail(...args),
 }));
 
-import { createUser, deleteUser } from "@/app/admin/usuarios/actions";
+import { createUser, deleteUser, updateContactSettings } from "@/app/admin/usuarios/actions";
 import type { ActionState } from "@/lib/admin-action-types";
 
 const initialState: ActionState = { ok: false };
@@ -69,6 +76,7 @@ describe("user actions", () => {
     mocks.bcryptHash.mockResolvedValue("hashed-password");
     mocks.userCreate.mockResolvedValue({});
     mocks.sendWelcomeEmail.mockResolvedValue(undefined);
+    mocks.siteSettingsUpsert.mockResolvedValue({});
   });
 
   describe("authorization", () => {
@@ -219,6 +227,76 @@ describe("user actions", () => {
       );
 
       errorSpy.mockRestore();
+    });
+  });
+
+  describe("updateContactSettings", () => {
+    function buildContactFormData(overrides: Record<string, string> = {}): FormData {
+      const defaults: Record<string, string> = {
+        inquiryEmail: "consultas@alquileresanita.com.ar",
+        whatsappPhone: "5491155052228",
+      };
+      const formData = new FormData();
+      for (const [key, value] of Object.entries({ ...defaults, ...overrides })) {
+        formData.append(key, value);
+      }
+      return formData;
+    }
+
+    it("throws 'No autorizado' when the caller is not a default admin", async () => {
+      mocks.auth.mockResolvedValue({
+        user: { id: "user-2", email: "operative@alquileresanita.com.ar", isDefaultAdmin: false },
+      });
+
+      await expect(
+        updateContactSettings(initialState, buildContactFormData()),
+      ).rejects.toThrow("No autorizado");
+      expect(mocks.siteSettingsUpsert).not.toHaveBeenCalled();
+    });
+
+    it("saves valid settings with the WhatsApp digits stripped and upserts the default row", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ whatsappPhone: "+54 9 11-5505-2228" }),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(mocks.siteSettingsUpsert).toHaveBeenCalledWith({
+        where: { id: "default" },
+        create: {
+          id: "default",
+          inquiryEmail: "consultas@alquileresanita.com.ar",
+          whatsappPhone: "5491155052228",
+        },
+        update: {
+          inquiryEmail: "consultas@alquileresanita.com.ar",
+          whatsappPhone: "5491155052228",
+        },
+      });
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/contacto");
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/propiedades/[slug]", "page");
+    });
+
+    it("rejects an invalid email with a Spanish field error", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ inquiryEmail: "not-an-email" }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.inquiryEmail).toMatch(/email válido/i);
+      expect(mocks.siteSettingsUpsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects a WhatsApp without enough digits with a Spanish field error", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ whatsappPhone: "1234" }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.whatsappPhone).toMatch(/entre 8 y 15 dígitos/i);
+      expect(mocks.siteSettingsUpsert).not.toHaveBeenCalled();
     });
   });
 });

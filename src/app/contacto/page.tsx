@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContactForm, Footer, TopNav } from "@/components/design-system";
+import { getContactSettings } from "@/lib/site-settings";
 
 export const metadata: Metadata = {
   title: "Contacto | Alquileres Anita",
@@ -7,10 +8,12 @@ export const metadata: Metadata = {
     "Contactanos por WhatsApp o email para consultar por tu próximo alojamiento en San Clemente del Tuyú.",
 };
 
-const whatsappUrl =
-  "https://wa.me/5491155052228?text=Hola,%20quiero%20consultar%20por%20un%20alojamiento";
+export default async function ContactPage() {
+  const { whatsappPhone } = await getContactSettings();
+  const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(
+    "Hola, quiero consultar por un alojamiento",
+  )}`;
 
-export default function ContactPage() {
   return (
     <div className="min-h-screen bg-canvas">
       <TopNav />

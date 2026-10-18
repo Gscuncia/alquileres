@@ -19,6 +19,14 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/propiedades/depto-1",
 }));
 
+// ContactCard is an async server component (it reads the DB-backed contact
+// settings); react-dom tests cannot render async components, so stub it.
+vi.mock("@/components/property/ContactCard", () => ({
+  ContactCard: ({ propertyTitle }: { propertyTitle: string }) => (
+    <div data-testid={`contact-card-${propertyTitle}`} />
+  ),
+}));
+
 const dbProperty = {
   id: "prop-1",
   slug: "depto-1",

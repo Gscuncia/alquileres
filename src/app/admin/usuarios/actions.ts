@@ -20,6 +20,13 @@ const createUserSchema = z.object({
   roleId: z.string().trim().min(1, "El rol es obligatorio."),
 });
 
+const updateContactSettingsSchema = z.object({
+  inquiryEmail: z.string().trim().email("Ingresá un email válido."),
+  whatsappPhone: z
+    .string()
+    .regex(/^\d{8,15}$/, "El WhatsApp debe tener entre 8 y 15 dígitos."),
+});
+
 function collectFieldErrors(error: z.ZodError): Record<string, string> {
   const fieldErrors: Record<string, string> = {};
   for (const issue of error.issues) {
@@ -129,5 +136,51 @@ export async function createUser(
   }
 
   revalidatePath("/admin/usuarios");
+  return { ok: true, message: ACTION_SUCCESS_MESSAGE };
+}
+
+export async function updateContactSettings(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdminForAction();
+
+  const inquiryEmail =
+    typeof formData.get("inquiryEmail") === "string"
+      ? (formData.get("inquiryEmail") as string).trim()
+      : "";
+
+  // Strip spaces, dashes, and plus signs before validating digits only.
+  const whatsappPhone = (
+    typeof formData.get("whatsappPhone") === "string"
+      ? (formData.get("whatsappPhone") as string)
+      : ""
+  )
+    .replace(/[\s\-+]/g, "")
+    .trim();
+
+  const parsed = updateContactSettingsSchema.safeParse({
+    inquiryEmail,
+    whatsappPhone,
+  });
+  if (!parsed.success) {
+    return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
+  }
+
+  await prisma.siteSettings.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      inquiryEmail: parsed.data.inquiryEmail,
+      whatsappPhone: parsed.data.whatsappPhone,
+    },
+    update: {
+      inquiryEmail: parsed.data.inquiryEmail,
+      whatsappPhone: parsed.data.whatsappPhone,
+    },
+  });
+
+  revalidatePath("/contacto");
+  revalidatePath("/propiedades/[slug]", "page");
   return { ok: true, message: ACTION_SUCCESS_MESSAGE };
 }

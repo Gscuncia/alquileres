@@ -159,4 +159,110 @@ describe("BookingForm payment split", () => {
     expect(EMPTY_BOOKING_FORM.restRecipientId).toBe("");
     expect(EMPTY_BOOKING_FORM.depositPaymentMethod).toBe("");
   });
+
+  it("warns and blocks the submit when the stay overlaps an existing booking", () => {
+    render(
+      <BookingForm
+        action={action}
+        guests={guests}
+        recipients={recipients}
+        properties={[{ id: "p-1", title: "Depto 1" }]}
+        bookings={[
+          {
+            id: "b-existing",
+            propertyId: "p-1",
+            guestName: "Rocio Santillan",
+            checkIn: "2026-10-11T15:00:00.000Z",
+            checkOut: "2026-10-15T13:00:00.000Z",
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Propiedad"), {
+      target: { value: "p-1" },
+    });
+    setByLabel("Fecha de ingreso", "2026-10-10");
+    setByLabel("Fecha de egreso", "2026-10-13");
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /Depto 1 ya está reservado por Rocio Santillan/i,
+    );
+    expect(screen.getByRole("button", { name: /guardar/i })).toBeDisabled();
+  });
+
+  it("stays silent for a different property or a non-overlapping stay", () => {
+    render(
+      <BookingForm
+        action={action}
+        guests={guests}
+        recipients={recipients}
+        properties={[
+          { id: "p-1", title: "Depto 1" },
+          { id: "p-2", title: "Casita" },
+        ]}
+        bookings={[
+          {
+            id: "b-existing",
+            propertyId: "p-1",
+            guestName: "Rocio Santillan",
+            checkIn: "2026-10-11T15:00:00.000Z",
+            checkOut: "2026-10-15T13:00:00.000Z",
+          },
+        ]}
+      />,
+    );
+
+    // Same dates, other property: no conflict.
+    fireEvent.change(screen.getByLabelText("Propiedad"), {
+      target: { value: "p-2" },
+    });
+    setByLabel("Fecha de ingreso", "2026-10-10");
+    setByLabel("Fecha de egreso", "2026-10-13");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    // Same property, stay AFTER the existing one: no conflict either.
+    fireEvent.change(screen.getByLabelText("Propiedad"), {
+      target: { value: "p-1" },
+    });
+    setByLabel("Fecha de ingreso", "2026-10-15");
+    setByLabel("Fecha de egreso", "2026-10-18");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /guardar/i }),
+    ).not.toBeDisabled();
+  });
+
+  it("never conflicts with the booking being edited itself", () => {
+    render(
+      <BookingForm
+        action={action}
+        guests={guests}
+        recipients={recipients}
+        properties={[{ id: "p-1", title: "Depto 1" }]}
+        initialValues={{
+          id: "b-existing",
+          propertyId: "p-1",
+          checkInDate: "2026-10-10",
+          checkInTime: "12:00",
+          checkOutDate: "2026-10-13",
+          checkOutTime: "10:00",
+        }}
+        bookings={[
+          {
+            id: "b-existing",
+            propertyId: "p-1",
+            guestName: "Juan Pérez",
+            checkIn: "2026-10-11T15:00:00.000Z",
+            checkOut: "2026-10-15T13:00:00.000Z",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /guardar/i }),
+    ).not.toBeDisabled();
+  });
 });

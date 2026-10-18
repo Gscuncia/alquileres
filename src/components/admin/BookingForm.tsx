@@ -9,12 +9,22 @@ import {
   AdminField,
   AdminInput,
 } from "@/components/admin/primitives";
-import { stayNights, toUtc } from "@/lib/datetime";
+import { stayNights, toUtc, formatInTz } from "@/lib/datetime";
 import { formatMoney } from "@/lib/metrics";
 
 export interface RecipientOption {
   id: string;
   name: string;
+}
+
+/** Existing stay used for the client-side availability alert. */
+export interface BookingOverlapOption {
+  id: string;
+  propertyId: string;
+  guestName: string;
+  /** ISO instants of the existing stay. */
+  checkIn: string;
+  checkOut: string;
 }
 
 export type PaymentTypeValue = "EFECTIVO" | "TRANSFERENCIA";
@@ -44,6 +54,8 @@ interface BookingFormProps {
   recipients: RecipientOption[];
   /** Provided only where a property may be chosen in the form (calendar). */
   properties?: { id: string; title: string }[];
+  /** Existing stays for the live availability alert. */
+  bookings?: BookingOverlapOption[];
   submitLabel?: string;
 }
 
@@ -100,6 +112,7 @@ export function BookingForm({
   guests,
   recipients,
   properties,
+  bookings,
   submitLabel = "Guardar",
 }: BookingFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
@@ -116,6 +129,7 @@ export function BookingForm({
   const [checkInTime, setCheckInTime] = useState(values.checkInTime);
   const [checkOutDate, setCheckOutDate] = useState(values.checkOutDate);
   const [checkOutTime, setCheckOutTime] = useState(values.checkOutTime);
+  const [propertyId, setPropertyId] = useState(values.propertyId);
   const fieldErrors = state.fieldErrors ?? {};
 
   // Live summary: total and rest derived from the current inputs. Incomplete
@@ -135,6 +149,26 @@ export function BookingForm({
     : null;
   const total = price > 0 && nights !== null ? price * nights : null;
   const rest = total === null ? null : Math.max(0, total - deposit);
+
+  // Live availability: overlapping stays of the selected property block the
+  // submit client-side; the server action re-checks authoritatively on save.
+  // A booking being edited never conflicts with itself.
+  const activePropertyId = properties ? propertyId : values.propertyId;
+  const formCheckIn = hasStay ? toUtc(checkInDate, checkInTime) : null;
+  const formCheckOut = hasStay ? toUtc(checkOutDate, checkOutTime) : null;
+  const conflicts = (bookings ?? []).filter(
+    (booking) =>
+      formCheckIn !== null &&
+      formCheckOut !== null &&
+      booking.propertyId === activePropertyId &&
+      booking.id !== values.id &&
+      new Date(booking.checkIn) < formCheckOut &&
+      new Date(booking.checkOut) > formCheckIn,
+  );
+  const hasConflicts = conflicts.length > 0;
+  const propertyTitle =
+    properties?.find((property) => property.id === activePropertyId)?.title ??
+    "El alojamiento";
 
   return (
     <form action={formAction} className="space-y-6">
@@ -166,7 +200,8 @@ export function BookingForm({
             id="propertyId"
             name="propertyId"
             required
-            defaultValue={values.propertyId}
+            value={propertyId}
+            onChange={(event) => setPropertyId(event.target.value)}
           >
             <option value="">Seleccionar propiedad…</option>
             {properties.map((property) => (
@@ -196,8 +231,7 @@ export function BookingForm({
             value={checkInDate}
             onChange={(event) => setCheckInDate(event.target.value)}
           />
-        </AdminField>
-        <AdminField label="Hora de ingreso" htmlFor="checkInTime" error={fieldErrors.checkInTime}>
+        </AdminField>        <AdminField label="Hora de ingreso" htmlFor="checkInTime" error={fieldErrors.checkInTime}>
           <AdminInput
             as="select"
             id="checkInTime"
@@ -240,6 +274,22 @@ export function BookingForm({
           </AdminInput>
         </AdminField>
       </div>
+
+      {hasConflicts && (
+        <div
+          role="alert"
+          className="space-y-1 rounded-sm border border-primary-error-text bg-surface-soft px-4 py-3 text-body-sm text-primary-error-text"
+        >
+          {conflicts.map((conflict) => (
+            <p key={conflict.id}>
+              ⚠️ {propertyTitle} ya está reservado por {conflict.guestName} entre el{" "}
+              {formatInTz(new Date(conflict.checkIn))} y el{" "}
+              {formatInTz(new Date(conflict.checkOut))}. Elegí otras fechas u otro
+              alojamiento.
+            </p>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AdminField label="Precio por noche" htmlFor="pricePerNight" error={fieldErrors.pricePerNight}>
@@ -394,7 +444,7 @@ export function BookingForm({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="primary" disabled={hasConflicts}>
           {submitLabel}
         </Button>
       </div>

@@ -133,6 +133,13 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
               phone,
             }))}
             recipients={recipients.map(({ id, name }) => ({ id, name }))}
+            bookings={bookings.map(({ id, checkIn, checkOut, guest }) => ({
+              id,
+              propertyId: property.id,
+              guestName: `${guest.firstName} ${guest.lastName}`,
+              checkIn: checkIn.toISOString(),
+              checkOut: checkOut.toISOString(),
+            }))}
             submitLabel={editing ? "Guardar cambios" : "Crear reserva"}
           />
         </div>

@@ -10,11 +10,22 @@ import { createBooking } from "@/app/admin/bookings/actions";
 export default async function NuevaReservaPage() {
   await requireAdmin();
 
-  const [properties, recipients, guests] = await Promise.all([
+  const [properties, recipients, guests, bookingRows] = await Promise.all([
     prisma.property.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.transferRecipient.findMany({ orderBy: { name: "asc" } }),
     prisma.guest.findMany({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    }),
+    // Existing stays feed the live availability alert in the form.
+    prisma.booking.findMany({
+      select: {
+        id: true,
+        propertyId: true,
+        checkIn: true,
+        checkOut: true,
+        guest: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { checkIn: "asc" },
     }),
   ]);
 
@@ -41,6 +52,13 @@ export default async function NuevaReservaPage() {
           }))}
           recipients={recipients.map(({ id, name }) => ({ id, name }))}
           properties={properties.map(({ id, title }) => ({ id, title }))}
+          bookings={bookingRows.map(({ id, propertyId, checkIn, checkOut, guest }) => ({
+            id,
+            propertyId,
+            guestName: `${guest.firstName} ${guest.lastName}`,
+            checkIn: checkIn.toISOString(),
+            checkOut: checkOut.toISOString(),
+          }))}
           submitLabel="Crear reserva"
         />
       </AdminPanel>

@@ -22,6 +22,7 @@ const TAB_OPTIONS = [
   { id: "huespedes", label: "Huéspedes" },
   { id: "destinatarios", label: "Destinatarios" },
   { id: "gastos", label: "Gastos" },
+  { id: "contexto", label: "Contexto" },
 ] as const;
 
 const tableCellClasses = "border-b border-hairline px-4 py-3 text-body-sm text-body";

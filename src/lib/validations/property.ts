@@ -31,6 +31,15 @@ const hexColor = z
   .optional()
   .transform((value) => (value ? value.toLowerCase() : null));
 
+/** One framed-image entry: URL plus optional fit/focus/zoom with defaults. */
+export const imageEntrySchema = z.object({
+  url: httpUrl,
+  fit: z.enum(["cover", "contain"]).default("cover"),
+  x: z.number().min(0).max(100).default(50),
+  y: z.number().min(0).max(100).default(50),
+  zoom: z.number().min(0.5).max(3).default(1),
+});
+
 export const propertySchema = z.object({
   title: requiredText("El título es obligatorio."),
   slug: requiredText("El slug es obligatorio.").regex(
@@ -70,17 +79,7 @@ export const propertySchema = z.object({
     .int({ message: "Los baños deben ser un número entero mayor o igual a 0." })
     .min(0, { message: "Los baños deben ser un número entero mayor o igual a 0." }),
   amenities: z.array(z.string().trim().min(1)).optional(),
-  images: z
-    .array(
-      z.object({
-        url: httpUrl,
-        fit: z.enum(["cover", "contain"]).default("cover"),
-        x: z.number().min(0).max(100).default(50),
-        y: z.number().min(0).max(100).default(50),
-        zoom: z.number().min(0.5).max(3).default(1),
-      }),
-    )
-    .optional(),
+  images: z.array(imageEntrySchema).optional(),
   color: hexColor,
   published: z.boolean().default(true),
   sortOrder: z

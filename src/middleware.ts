@@ -10,6 +10,7 @@ const TAB_ROUTE_PREFIXES = [
   { prefix: "/admin/huespedes", tab: "huespedes" },
   { prefix: "/admin/destinatarios", tab: "destinatarios" },
   { prefix: "/admin/gastos", tab: "gastos" },
+  { prefix: "/admin/contexto", tab: "contexto" },
   { prefix: "/admin/usuarios", tab: "usuarios" },
   { prefix: "/admin/roles", tab: "roles" },
 ] as const;

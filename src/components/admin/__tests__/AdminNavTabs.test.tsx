@@ -17,6 +17,7 @@ const ALL_TAB_LABELS = [
   "Huéspedes",
   "Destinatarios",
   "Gastos",
+  "Contexto",
   "Usuarios",
   "Roles",
 ];
@@ -67,6 +68,14 @@ describe("AdminNavTabs", () => {
 
     expect(screen.queryByRole("link", { name: "Usuarios" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Roles" })).not.toBeInTheDocument();
+  });
+
+  it("renders Contexto for a restricted role with the tab allowed", () => {
+    render(<AdminNavTabs allowedTabs={["contexto"]} />);
+
+    expect(screen.getByRole("link", { name: "Contexto" })).toBeInTheDocument();
+    // Unlike usuarios/roles, Contexto is not admin-only.
+    expect(screen.queryByRole("link", { name: "Usuarios" })).not.toBeInTheDocument();
   });
 
   it("shows Usuarios and Roles for default admins", () => {

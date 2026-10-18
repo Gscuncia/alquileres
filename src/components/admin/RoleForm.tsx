@@ -17,6 +17,7 @@ const TAB_OPTIONS = [
   { id: "huespedes", label: "Huéspedes" },
   { id: "destinatarios", label: "Destinatarios" },
   { id: "gastos", label: "Gastos" },
+  { id: "contexto", label: "Contexto" },
 ] as const;
 
 interface RoleFormProps {

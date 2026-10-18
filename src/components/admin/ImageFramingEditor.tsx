@@ -26,7 +26,7 @@ interface DragState {
  * them by index. Hidden inputs must not be disabled: disabled inputs do not
  * submit and would break the FormData alignment.
  */
-function ImageRow({
+export function ImageRow({
   row,
   index,
   isFirst,
@@ -36,6 +36,7 @@ function ImageRow({
   onMoveUp,
   onMoveDown,
   onRemove,
+  extraFields,
 }: {
   row: PropertyImage;
   index: number;
@@ -46,6 +47,8 @@ function ImageRow({
   onMoveUp?: (index: number) => void;
   onMoveDown?: (index: number) => void;
   onRemove: () => void;
+  /** Extra fields rendered inside the row's main column, after the URL input. */
+  extraFields?: React.ReactNode;
 }) {
   const dragState = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -124,6 +127,7 @@ function ImageRow({
         <input type="hidden" name="imageFit" value={row.fit} />
         <input type="hidden" name="imageX" value={String(Math.round(row.x))} />
         <input type="hidden" name="imageY" value={String(Math.round(row.y))} />
+        {extraFields}
         <div className="flex items-center gap-2">
           <label
             htmlFor={`imageZoom-${index + 1}`}
@@ -207,6 +211,7 @@ export function ImageFramingEditor({
   onMoveUp,
   onMoveDown,
   error,
+  label = "Imágenes",
 }: {
   rows: PropertyImage[];
   onChange: (index: number, patch: Partial<PropertyImage>) => void;
@@ -215,11 +220,13 @@ export function ImageFramingEditor({
   onMoveUp?: (index: number) => void;
   onMoveDown?: (index: number) => void;
   error?: string;
+  /** Fieldset legend, overridable for non-property uses of the editor. */
+  label?: string;
 }) {
   return (
     <fieldset>
       <legend className="block text-caption-sm font-medium text-ink mb-1">
-        Imágenes
+        {label}
       </legend>
       <div className="space-y-4">
         {rows.map((row, index) => (

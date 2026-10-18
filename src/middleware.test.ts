@@ -113,6 +113,29 @@ describe("middleware", () => {
     expect(res).toBeUndefined();
   });
 
+  it("allows users with the contexto tab to access /admin/contexto", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin/contexto",
+      makeUser({ allowedTabs: ["contexto"] }),
+    );
+
+    const res = middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it("redirects users without the contexto tab away from /admin/contexto", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin/contexto", makeUser());
+
+    const res = middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+  });
+
   it("redirects users to /admin for unknown admin sub-routes", async () => {
     const middleware = await loadMiddleware();
     const req = buildRequest("/admin/unknown", makeUser());

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AdminEmptyState } from "./primitives";
-import { formatInTz, toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
+import { formatInTz, monthLabel, toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
 
 export interface CalendarEvent {
   id: string;
@@ -53,11 +53,6 @@ interface CalendarGridProps {
 }
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] as const;
-
-const MONTH_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  month: "long",
-  year: "numeric",
-};
 
 /** Max chips per cell before collapsing into the "+n más" day link. */
 const MAX_CHIPS = 2;
@@ -352,10 +347,7 @@ export function CalendarGrid({
       <div
         className="grid grid-cols-7 gap-1"
         role="grid"
-        aria-label={`Calendario de reservas — ${formatInTz(
-          firstOfMonth,
-          MONTH_FORMAT_OPTIONS,
-        )}`}
+        aria-label={`Calendario de reservas — ${monthLabel(month)}`}
       >
         {WEEKDAY_LABELS.map((label) => (
           <div

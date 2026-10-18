@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getAllPropertiesForAdmin } from "@/lib/properties-db";
-import { formatInTz, toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
+import { formatInTz, monthLabel, toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
 import {
   CalendarGrid,
   DayDetailList,
@@ -227,10 +227,7 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
           </Link>
         </Button>
         <span className="text-body-md font-semibold capitalize text-ink">
-          {formatInTz(
-            new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1),
-            { month: "long", year: "numeric" },
-          )}
+          {monthLabel(month)}
         </span>
         <Button asChild variant="tertiary">
           <Link

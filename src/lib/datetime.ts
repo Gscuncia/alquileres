@@ -116,3 +116,18 @@ export function nightsBetween(
 export function stayNights(checkIn: Date, checkOut: Date): number {
   return nightsBetween(checkIn, checkOut, checkIn, checkOut);
 }
+
+/**
+ * Label for a `YYYY-MM` month ("octubre de 2026"), formatted in the app's
+ * fixed BA timezone from the month's first midnight built with the explicit
+ * offset. Building the instant through `toUtc` (instead of local
+ * `new Date(y, m, 1)`) keeps the label correct on ANY host timezone — the
+ * previous local-midnight construction rendered the previous month's name
+ * on UTC servers (Oct 1 00:00 UTC = Sep 30 21:00 in BA).
+ */
+export function monthLabel(
+  month: string,
+  options: Intl.DateTimeFormatOptions = { month: "long", year: "numeric" },
+): string {
+  return formatInTz(toUtc(`${month.slice(0, 7)}-01`, "00:00"), options);
+}

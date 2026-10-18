@@ -6,6 +6,7 @@ import {
   formatInTz,
   nightsBetween,
   stayNights,
+  monthLabel,
 } from "@/lib/datetime";
 
 const ROUND_TRIP_CASES: Array<[string, string]> = [
@@ -172,5 +173,16 @@ describe("stayNights (total nights of a stay)", () => {
     expect(
       stayNights(toUtc("2026-10-10", "12:00"), toUtc("2026-10-10", "23:30")),
     ).toBe(0);
+  });
+});
+
+describe("monthLabel (timezone-independent month titles)", () => {
+  it("labels each month correctly regardless of the host timezone", () => {
+    expect(monthLabel("2026-10")).toBe("octubre de 2026");
+    expect(monthLabel("2026-01")).toBe("enero de 2026");
+    expect(monthLabel("2026-12")).toBe("diciembre de 2026");
+    // The bug this locks in: a local `new Date(2026, 9, 1)` on a UTC host
+    // formatted as "septiembre de 2026" while the grid showed October.
+    expect(monthLabel("2026-10")).not.toContain("septiembre");
   });
 });

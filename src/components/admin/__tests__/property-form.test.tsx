@@ -347,4 +347,79 @@ describe("PropertyForm", () => {
     expect(screen.getByRole("checkbox", { name: /publicada/i })).not.toBeChecked();
     expect(screen.getByLabelText(/orden/i)).toHaveValue(3);
   });
+
+  it("reorders image rows with the up/down controls", () => {
+    render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-first",
+              fit: "cover",
+              x: 50,
+              y: 50,
+              zoom: 1,
+            },
+            {
+              url: "https://images.unsplash.com/photo-second",
+              fit: "cover",
+              x: 50,
+              y: 50,
+              zoom: 1,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByAltText("Vista previa 1")).toHaveAttribute(
+      "src",
+      "https://images.unsplash.com/photo-first",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /bajar foto 1/i }));
+
+    expect(screen.getByAltText("Vista previa 1")).toHaveAttribute(
+      "src",
+      "https://images.unsplash.com/photo-second",
+    );
+    expect(screen.getByAltText("Vista previa 2")).toHaveAttribute(
+      "src",
+      "https://images.unsplash.com/photo-first",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /subir foto 2/i }));
+
+    expect(screen.getByAltText("Vista previa 1")).toHaveAttribute(
+      "src",
+      "https://images.unsplash.com/photo-first",
+    );
+  });
+
+  it("disables the reorder buttons at the row boundaries", () => {
+    render(
+      <PropertyForm
+        action={mockAction}
+        initialValues={{
+          images: [
+            {
+              url: "https://images.unsplash.com/photo-only",
+              fit: "cover",
+              x: 50,
+              y: 50,
+              zoom: 1,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /subir foto 1/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /bajar foto 1/i }),
+    ).toBeDisabled();
+  });
 });

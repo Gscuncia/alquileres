@@ -300,6 +300,22 @@ export function PropertyForm({
         onRemove={(index) =>
           setImages((rows) => rows.filter((_, i) => i !== index))
         }
+        onMoveUp={(index) =>
+          setImages((rows) => {
+            if (index <= 0) return rows;
+            const next = [...rows];
+            [next[index - 1], next[index]] = [next[index], next[index - 1]];
+            return next;
+          })
+        }
+        onMoveDown={(index) =>
+          setImages((rows) => {
+            if (index >= rows.length - 1) return rows;
+            const next = [...rows];
+            [next[index], next[index + 1]] = [next[index + 1], next[index]];
+            return next;
+          })
+        }
         error={fieldErrors.images}
       />
       <p className="-mt-4 text-caption-sm text-muted">

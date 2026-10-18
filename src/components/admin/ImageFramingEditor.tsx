@@ -29,14 +29,22 @@ interface DragState {
 function ImageRow({
   row,
   index,
+  isFirst,
+  isLast,
   onChangeUrl,
   onChange,
+  onMoveUp,
+  onMoveDown,
   onRemove,
 }: {
   row: PropertyImage;
   index: number;
+  isFirst: boolean;
+  isLast: boolean;
   onChangeUrl: (value: string) => void;
   onChange: (patch: Partial<Pick<PropertyImage, "fit" | "x" | "y" | "zoom">>) => void;
+  onMoveUp?: (index: number) => void;
+  onMoveDown?: (index: number) => void;
   onRemove: () => void;
 }) {
   const dragState = useRef<DragState | null>(null);
@@ -142,6 +150,24 @@ function ImageRow({
           <Button
             type="button"
             variant="ghost"
+            disabled={isFirst}
+            onClick={() => onMoveUp?.(index)}
+            aria-label={`Subir foto ${index + 1}`}
+          >
+            ↑
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isLast}
+            onClick={() => onMoveDown?.(index)}
+            aria-label={`Bajar foto ${index + 1}`}
+          >
+            ↓
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
             onClick={() => onChange({ fit: isContain ? "cover" : "contain" })}
           >
             {isContain ? "Llenar el cuadro" : "Mostrar completa"}
@@ -168,21 +194,26 @@ function ImageRow({
 }
 
 /**
- * Ordered image-rows editor with live framing preview. Controlled by the
- * parent form: every edit flows through the onChange handlers so the
- * submitted FormData stays aligned with the rendered row order.
+ * Ordered image-rows editor with live framing preview and per-row reordering.
+ * Rows render in display order: the first row is the property cover. Every
+ * edit flows through the onChange handlers so the submitted FormData stays
+ * aligned with the rendered row order.
  */
 export function ImageFramingEditor({
   rows,
   onChange,
   onAdd,
   onRemove,
+  onMoveUp,
+  onMoveDown,
   error,
 }: {
   rows: PropertyImage[];
   onChange: (index: number, patch: Partial<PropertyImage>) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
+  onMoveUp?: (index: number) => void;
+  onMoveDown?: (index: number) => void;
   error?: string;
 }) {
   return (
@@ -196,10 +227,14 @@ export function ImageFramingEditor({
             key={index}
             row={row}
             index={index}
+            isFirst={index === 0}
+            isLast={index === rows.length - 1}
             onChangeUrl={(value) =>
               onChange(index, { url: toDirectDriveUrl(value) })
             }
             onChange={(patch) => onChange(index, patch)}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
             onRemove={() => onRemove(index)}
           />
         ))}

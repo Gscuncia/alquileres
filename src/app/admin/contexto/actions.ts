@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminForAction } from "@/lib/require-auth";
 import { toDirectDriveUrl } from "@/lib/drive-url";
 import { IMAGE_FITS, type ImageFit } from "@/lib/image-framing";
-import { ABOUT_PAGE, WHAT_TO_DO_PAGE } from "@/lib/site-content";
+import { ABOUT_PAGE, WHAT_TO_DO_PAGE, LOCATION_PAGE } from "@/lib/site-content";
 import {
   aboutSchema,
   whatToDoSchema,
+  locationSchema,
   collectSiteContentFieldErrors,
 } from "@/lib/validations/site-content";
 import {
@@ -151,5 +152,37 @@ export async function updateWhatToDoContent(
   });
 
   revalidatePublicPages();
+  return { ok: true, message: ACTION_SUCCESS_MESSAGE };
+}
+
+export async function updateLocationContent(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdminForAction();
+
+  const parsed = locationSchema.safeParse({
+    address: text(formData, "address"),
+    body: text(formData, "body"),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      fieldErrors: collectSiteContentFieldErrors(parsed.error),
+    };
+  }
+
+  const data = {
+    intro: parsed.data.address,
+    body: parsed.data.body,
+  };
+  await prisma.siteContent.upsert({
+    where: { page: LOCATION_PAGE },
+    create: { page: LOCATION_PAGE, ...data },
+    update: data,
+  });
+
+  revalidatePath("/donde-estamos");
+  revalidatePath("/");
   return { ok: true, message: ACTION_SUCCESS_MESSAGE };
 }

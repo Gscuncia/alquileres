@@ -25,6 +25,7 @@ vi.mock("next/cache", () => ({
 import {
   updateAboutContent,
   updateWhatToDoContent,
+  updateLocationContent,
 } from "@/app/admin/contexto/actions";
 import type { ActionState } from "@/lib/admin-action-types";
 
@@ -245,6 +246,58 @@ describe("contexto actions", () => {
 
       expect(result.ok).toBe(false);
       expect(result.fieldErrors?.cards).toBeDefined();
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("updateLocationContent", () => {
+    it("throws when the caller is not a default admin", async () => {
+      mocks.requireAdminForAction.mockRejectedValue(new Error("No autorizado"));
+
+      await expect(
+        updateLocationContent(initialState, buildFormData({})),
+      ).rejects.toThrow("No autorizado");
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    });
+
+    it("upserts the donde-estamos row and revalidates both public paths", async () => {
+      const formData = buildFormData({
+        address: "Calle 4 entre 15 y 16",
+        body: "Párrafo uno.\n\nPárrafo dos.",
+      });
+
+      const result = await updateLocationContent(initialState, formData);
+
+      expect(result).toEqual({
+        ok: true,
+        message: "Los cambios se guardaron correctamente.",
+      });
+      expect(mocks.upsert).toHaveBeenCalledTimes(1);
+      const args = mocks.upsert.mock.calls[0][0];
+      expect(args.where).toEqual({ page: "donde-estamos" });
+      expect(args.create).toEqual({
+        page: "donde-estamos",
+        intro: "Calle 4 entre 15 y 16",
+        body: "Párrafo uno.\n\nPárrafo dos.",
+      });
+      expect(args.update).toEqual({
+        intro: "Calle 4 entre 15 y 16",
+        body: "Párrafo uno.\n\nPárrafo dos.",
+      });
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/donde-estamos");
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/");
+    });
+
+    it("returns the address field error when the address is empty", async () => {
+      const result = await updateLocationContent(
+        initialState,
+        buildFormData({ address: "", body: "Texto" }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.address).toBe(
+        "La dirección es obligatoria.",
+      );
       expect(mocks.upsert).not.toHaveBeenCalled();
     });
   });

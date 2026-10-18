@@ -31,6 +31,11 @@ export const whatToDoSchema = z.object({
     .default([]),
 });
 
+export const locationSchema = z.object({
+  address: requiredText("La dirección es obligatoria."),
+  body: z.string().trim(),
+});
+
 /**
  * Aggregates zod issues into a per-field error map. Nested card issues
  * (paths like ["cards", 0, "title"] or ["cards", 0, "image", "url"]) all

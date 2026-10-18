@@ -15,8 +15,10 @@ vi.mock("@/lib/prisma", () => ({
 import {
   DEFAULT_ABOUT_CONTENT,
   DEFAULT_WHATTODO_CONTENT,
+  DEFAULT_LOCATION_CONTENT,
   getAboutContent,
   getWhatToDoContent,
+  getLocationContent,
 } from "@/lib/site-content";
 
 describe("site content library", () => {
@@ -141,5 +143,58 @@ describe("site content library", () => {
 
     expect(about.intro).toBe("");
     expect(whatToDo.intro).toBe("");
+  });
+});
+
+describe("getLocationContent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("queries the donde-estamos row by its page key", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+
+    await getLocationContent();
+
+    expect(mocks.findUnique).toHaveBeenCalledWith({
+      where: { page: "donde-estamos" },
+    });
+  });
+
+  it("returns the defaults when prisma returns null", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+
+    await expect(getLocationContent()).resolves.toEqual(
+      DEFAULT_LOCATION_CONTENT,
+    );
+  });
+
+  it("returns the defaults when prisma throws", async () => {
+    mocks.findUnique.mockRejectedValue(new Error("db down"));
+
+    await expect(getLocationContent()).resolves.toEqual(
+      DEFAULT_LOCATION_CONTENT,
+    );
+  });
+
+  it("parses the persisted intro and body into address and paragraphs", async () => {
+    mocks.findUnique.mockResolvedValue({
+      intro: "Calle 4, San Clemente",
+      body: "Uno.\n\nDos.\n\n \n\nTres.",
+    });
+
+    const content = await getLocationContent();
+
+    expect(content.address).toBe("Calle 4, San Clemente");
+    expect(content.paragraphs).toEqual(["Uno.", "Dos.", "Tres."]);
+  });
+
+  it("falls back to the default address when the intro is empty", async () => {
+    mocks.findUnique.mockResolvedValue({ intro: "   ", body: "Solo." });
+
+    const content = await getLocationContent();
+
+    expect(content.address).toBe(DEFAULT_LOCATION_CONTENT.address);
+    expect(content.paragraphs).toEqual(["Solo."]);
   });
 });

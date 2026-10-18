@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { LOCATION_ADDRESS } from "@/lib/location";
 import {
   normalizeImage,
   normalizeImages,
@@ -8,6 +9,7 @@ import {
 /** Row keys used by `SiteContent.page` (kept in one place for actions). */
 export const ABOUT_PAGE = "quienes-somos";
 export const WHAT_TO_DO_PAGE = "que-hacer";
+export const LOCATION_PAGE = "donde-estamos";
 
 export interface AboutContent {
   intro: string;
@@ -24,6 +26,12 @@ export interface AttractionCard {
 export interface WhatToDoContent {
   intro: string;
   cards: AttractionCard[];
+}
+
+export interface LocationContent {
+  /** Highlighted address line shown under the h1 (stored in the intro column). */
+  address: string;
+  paragraphs: string[];
 }
 
 /** The content shipped with the original hardcoded pages. */
@@ -125,6 +133,15 @@ export const DEFAULT_WHATTODO_CONTENT: WhatToDoContent = {
   ],
 };
 
+/** The content shipped with the original hardcoded location page. */
+export const DEFAULT_LOCATION_CONTENT: LocationContent = {
+  address: LOCATION_ADDRESS,
+  paragraphs: [
+    "Nuestras propiedades están ubicadas en una zona tranquila y accesible de San Clemente del Tuyú. Estar a una cuadra del centro significa tener cerca negocios, restaurantes y servicios, mientras que a solo dos cuadras de la playa podés disfrutar del mar en minutos.",
+    "Es una ubicación ideal para quienes buscan comodidad sin renunciar al relax: accesos directos, calles arboladas y la posibilidad de dejar el auto y moverse caminando durante toda la estadía.",
+  ],
+};
+
 /** Body text stores whole paragraphs separated by a blank line. */
 function parseParagraphs(body: string): string[] {
   return body
@@ -203,5 +220,31 @@ export async function getWhatToDoContent(): Promise<WhatToDoContent> {
     };
   } catch {
     return DEFAULT_WHATTODO_CONTENT;
+  }
+}
+
+/**
+ * Public reader for «¿Dónde estamos?»: DB row, falling back to the defaults.
+ * Unlike the other readers, an empty persisted intro falls back to the default
+ * address because the page must never render an empty highlighted line.
+ */
+export async function getLocationContent(): Promise<LocationContent> {
+  try {
+    const row = await prisma.siteContent.findUnique({
+      where: { page: LOCATION_PAGE },
+    });
+    if (!row) {
+      return DEFAULT_LOCATION_CONTENT;
+    }
+    const address =
+      typeof row.intro === "string" && row.intro.trim().length > 0
+        ? row.intro.trim()
+        : DEFAULT_LOCATION_CONTENT.address;
+    return {
+      address,
+      paragraphs: parseParagraphs(row.body),
+    };
+  } catch {
+    return DEFAULT_LOCATION_CONTENT;
   }
 }

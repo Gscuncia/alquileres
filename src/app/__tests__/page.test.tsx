@@ -1,14 +1,26 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import LandingPage from "@/app/page";
 
 const mockGetPublishedProperties = vi.fn();
+const mockGetLocationContent = vi.fn();
 
 vi.mock("@/lib/properties-db", () => ({
   getPublishedProperties: () => mockGetPublishedProperties(),
 }));
 
+vi.mock("@/lib/site-content", () => ({
+  getLocationContent: () => mockGetLocationContent(),
+}));
+
 describe("LandingPage", () => {
+  beforeEach(() => {
+    mockGetLocationContent.mockResolvedValue({
+      address: "Calle 4 entre 15 y 16, San Clemente de Tuyú",
+      paragraphs: [],
+    });
+  });
+
   it("renders published properties from the database", async () => {
     mockGetPublishedProperties.mockResolvedValue([
       {

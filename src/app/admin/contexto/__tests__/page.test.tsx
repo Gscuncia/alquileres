@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   siteContentFindMany: vi.fn(),
   getAboutContent: vi.fn(),
   getWhatToDoContent: vi.fn(),
+  getLocationContent: vi.fn(),
 }));
 
 vi.mock("@/lib/require-auth", () => ({
@@ -28,6 +29,7 @@ vi.mock("@/lib/site-content", async () => {
     ...actual,
     getAboutContent: () => mocks.getAboutContent(),
     getWhatToDoContent: () => mocks.getWhatToDoContent(),
+    getLocationContent: () => mocks.getLocationContent(),
   };
 });
 
@@ -49,10 +51,21 @@ vi.mock("@/components/admin/WhatToDoContentForm", () => ({
   ),
 }));
 
+vi.mock("@/components/admin/LocationContentForm", () => ({
+  LocationContentForm: ({
+    initialValues,
+  }: {
+    initialValues: { address: string; body: string };
+  }) => (
+    <div data-testid="location-form">{initialValues.address}</div>
+  ),
+}));
+
 import ContextoPage from "@/app/admin/contexto/page";
 import {
   DEFAULT_ABOUT_CONTENT,
   DEFAULT_WHATTODO_CONTENT,
+  DEFAULT_LOCATION_CONTENT,
 } from "@/lib/site-content";
 
 describe("ContextoPage", () => {
@@ -64,6 +77,7 @@ describe("ContextoPage", () => {
     mocks.siteContentFindMany.mockResolvedValue([]);
     mocks.getAboutContent.mockResolvedValue(DEFAULT_ABOUT_CONTENT);
     mocks.getWhatToDoContent.mockResolvedValue(DEFAULT_WHATTODO_CONTENT);
+    mocks.getLocationContent.mockResolvedValue(DEFAULT_LOCATION_CONTENT);
   });
 
   it("requires the contexto tab permission", async () => {
@@ -92,12 +106,18 @@ describe("ContextoPage", () => {
         name: "¿Qué hacer en San Clemente del Tuyú?",
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "¿Dónde estamos?" }),
+    ).toBeInTheDocument();
 
     expect(screen.getByTestId("about-form")).toHaveTextContent(
       DEFAULT_ABOUT_CONTENT.intro,
     );
     expect(screen.getByTestId("what-todo-form")).toHaveTextContent(
       `(6 cards)`,
+    );
+    expect(screen.getByTestId("location-form")).toHaveTextContent(
+      DEFAULT_LOCATION_CONTENT.address,
     );
   });
 

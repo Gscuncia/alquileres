@@ -6,7 +6,7 @@ import {
   PropertyCard,
   TopNav,
 } from "@/components/design-system";
-import { LOCATION_ADDRESS } from "@/lib/location";
+import { getLocationContent } from "@/lib/site-content";
 import { getPublishedProperties } from "@/lib/properties-db";
 import { imageStyle } from "@/lib/image-framing";
 
@@ -14,7 +14,11 @@ const GOOGLE_REVIEWS_URL =
   "https://www.google.com/travel/search?q=alquileres%20anita%20google&g2lb=4965990%2C72471280%2C72573224%2C72647020%2C72686036%2C72803964%2C72882230%2C73064764%2C121529350%2C121608706%2C121738283%2C121762713%2C121921501%2C121951222%2C122078727%2C122093071&hl=es-419&gl=ar&ssta=1&ts=CAEaKwopEicyJTB4OTU5YzFiNWZiYjcxNDRlNToweGZlMzM4Y2M5N2M5ZjJmOTc&qs=CAEyFENnc0lsOV84NUplWjQ1bi1BUkFCOAI&ap=ugEHcmV2aWV3cw&ictx=111&ved=0CAAQ5JsGahcKEwiQsOOMuLSXAxUAAAAAHQAAAAAQCg";
 
 export default async function LandingPage() {
-  const properties = await getPublishedProperties();
+  const [properties, locationContent] = await Promise.all([
+    getPublishedProperties(),
+    getLocationContent(),
+  ]);
+  const locationAddress = locationContent.address;
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -74,7 +78,7 @@ export default async function LandingPage() {
             </div>
             <div>
               <h2 className="text-display-lg font-bold text-ink">¿Dónde estamos?</h2>
-              <p className="mt-3 text-body-md text-body">{LOCATION_ADDRESS}</p>
+              <p className="mt-3 text-body-md text-body">{locationAddress}</p>
               <Link
                 href="/donde-estamos"
                 className="mt-4 inline-flex items-center text-button-md font-medium text-primary underline-offset-2 transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"

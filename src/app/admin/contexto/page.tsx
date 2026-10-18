@@ -3,32 +3,41 @@ import { requirePermission } from "@/lib/require-auth";
 import {
   getAboutContent,
   getWhatToDoContent,
+  getLocationContent,
 } from "@/lib/site-content";
-import { updateAboutContent, updateWhatToDoContent } from "./actions";
+import {
+  updateAboutContent,
+  updateWhatToDoContent,
+  updateLocationContent,
+} from "./actions";
 import { AboutContentForm } from "@/components/admin/AboutContentForm";
 import { WhatToDoContentForm } from "@/components/admin/WhatToDoContentForm";
+import { LocationContentForm } from "@/components/admin/LocationContentForm";
 import { AdminPageHeader, AdminPanel } from "@/components/admin/primitives";
 
 export default async function ContextoPage() {
   await requirePermission("contexto");
 
-  const [aboutContent, whatToDoContent, siteRows] = await Promise.all([
-    getAboutContent(),
-    getWhatToDoContent(),
-    prisma.siteContent.findMany(),
-  ]);
+  const [aboutContent, whatToDoContent, locationContent, siteRows] =
+    await Promise.all([
+      getAboutContent(),
+      getWhatToDoContent(),
+      getLocationContent(),
+      prisma.siteContent.findMany(),
+    ]);
 
   // The forms edit the persisted text: a saved body round-trips exactly as
   // typed, so fall back to the default paragraphs only when there is no row.
   const aboutRow = siteRows.find((row) => row.page === "quienes-somos");
   const whatToDoRow = siteRows.find((row) => row.page === "que-hacer");
+  const locationRow = siteRows.find((row) => row.page === "donde-estamos");
 
   return (
     <div className="space-y-6">
       <AdminPageHeader title="Contexto" />
       <p className="text-body-sm text-body">
-        Editá acá el texto y las fotos de las páginas públicas «Quienes somos»
-        y «¿Qué hacer en San Clemente del Tuyú?».
+        Editá acá el texto y las fotos de las páginas públicas «Quienes somos»,
+        «¿Qué hacer en San Clemente del Tuyú?» y «¿Dónde estamos?».
       </p>
 
       <AdminPanel title="Quienes somos">
@@ -48,6 +57,16 @@ export default async function ContextoPage() {
           initialValues={{
             intro: whatToDoRow?.intro ?? whatToDoContent.intro,
             cards: whatToDoContent.cards,
+          }}
+        />
+      </AdminPanel>
+
+      <AdminPanel title="¿Dónde estamos?">
+        <LocationContentForm
+          action={updateLocationContent}
+          initialValues={{
+            address: locationRow?.intro ?? locationContent.address,
+            body: locationRow?.body ?? locationContent.paragraphs.join("\n\n"),
           }}
         />
       </AdminPanel>

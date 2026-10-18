@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   aboutSchema,
   whatToDoSchema,
+  locationSchema,
   collectSiteContentFieldErrors,
 } from "@/lib/validations/site-content";
 
@@ -131,5 +132,41 @@ describe("whatToDoSchema", () => {
       expect(fieldErrors.cards).toContain("; ");
       expect(fieldErrors.intro).toBeUndefined();
     }
+  });
+});
+
+describe("locationSchema", () => {
+  it("accepts a valid address and body", () => {
+    const parsed = locationSchema.safeParse({
+      address: "Calle 4 entre 15 y 16",
+      body: "Primer párrafo.\n\nSegundo párrafo.",
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data).toEqual({
+        address: "Calle 4 entre 15 y 16",
+        body: "Primer párrafo.\n\nSegundo párrafo.",
+      });
+    }
+  });
+
+  it("rejects an empty address with the expected message", () => {
+    const parsed = locationSchema.safeParse({ address: "   ", body: "" });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const fieldErrors = collectSiteContentFieldErrors(parsed.error);
+      expect(fieldErrors.address).toBe("La dirección es obligatoria.");
+    }
+  });
+
+  it("allows an empty body", () => {
+    const parsed = locationSchema.safeParse({
+      address: "Calle 4",
+      body: "",
+    });
+
+    expect(parsed.success).toBe(true);
   });
 });

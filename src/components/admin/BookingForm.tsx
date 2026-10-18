@@ -436,7 +436,13 @@ export function BookingForm({
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-body-sm text-muted">Monto a pagar</span>
+          <span className="text-body-sm text-muted">Monto seña</span>
+          <span className="text-body-sm font-semibold text-ink">
+            {formatMoney(deposit)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm text-muted">Monto para completar pago</span>
           <span className="text-body-sm font-semibold text-ink">
             {rest === null ? "—" : formatMoney(rest)}
           </span>

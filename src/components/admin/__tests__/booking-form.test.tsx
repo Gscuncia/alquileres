@@ -73,8 +73,9 @@ describe("BookingForm payment split", () => {
     renderForm();
 
     expect(screen.getByText("Monto total de la reserva")).toBeInTheDocument();
-    expect(screen.getByText("Monto a pagar")).toBeInTheDocument();
-    // Summary rows: nights + total + rest.
+    expect(screen.getByText("Monto seña")).toBeInTheDocument();
+    expect(screen.getByText("Monto para completar pago")).toBeInTheDocument();
+    // Summary rows: nights + total + rest (the deposit row always shows a value).
     expect(screen.getAllByText("—")).toHaveLength(3);
   });
 

@@ -4,14 +4,16 @@ import { useState } from "react";
 
 interface ContactFormProps {
   whatsappUrl: string;
+  /** Pre-filled message (e.g. the property query from a property page). */
+  prefillMessage?: string;
 }
 
-export function ContactForm({ whatsappUrl }: ContactFormProps) {
+export function ContactForm({ whatsappUrl, prefillMessage = "" }: ContactFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     email: "",
-    message: "",
+    message: prefillMessage,
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");

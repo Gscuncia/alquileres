@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContactForm, Footer, TopNav } from "@/components/design-system";
+import { buildContactFormMessage } from "@/lib/contact";
 import { getContactSettings } from "@/lib/site-settings";
 
 export const metadata: Metadata = {
@@ -8,11 +9,19 @@ export const metadata: Metadata = {
     "Contactanos por WhatsApp o email para consultar por tu próximo alojamiento en San Clemente del Tuyú.",
 };
 
-export default async function ContactPage() {
+interface ContactPageProps {
+  searchParams?: { propiedad?: string };
+}
+
+export default async function ContactPage({ searchParams }: ContactPageProps) {
   const { whatsappPhone } = await getContactSettings();
   const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(
     "Hola, quiero consultar por un alojamiento",
   )}`;
+
+  // Arriving from a property's "Contactar por email" pre-fills the query.
+  const propiedad = searchParams?.propiedad?.trim() ?? "";
+  const prefillMessage = propiedad ? buildContactFormMessage(propiedad) : "";
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -37,7 +46,7 @@ export default async function ContactPage() {
             </a>
           </div>
 
-          <ContactForm whatsappUrl={whatsappUrl} />
+          <ContactForm whatsappUrl={whatsappUrl} prefillMessage={prefillMessage} />
 
           <div className="mt-6 rounded-lg border border-cream-line bg-cream p-6">
             <p className="text-body-md text-body">

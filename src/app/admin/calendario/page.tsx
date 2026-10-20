@@ -2,7 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getAllPropertiesForAdmin } from "@/lib/properties-db";
-import { formatInTz, monthLabel, toDateStr, toTimeStr, toUtc } from "@/lib/datetime";
+import { formatInTz, monthLabel, toDateStr, toUtc } from "@/lib/datetime";
+import { bookingToFormValues } from "@/lib/booking-form-values";
 import {
   CalendarGrid,
   DayDetailList,
@@ -48,40 +49,6 @@ function monthBounds(month: string): { start: Date; end: Date } {
 
 function monthParam(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function toFormValues(booking: {
-  id: string;
-  propertyId: string;
-  guest: { id: string };
-  checkIn: Date;
-  checkOut: Date;
-  pricePerNight: unknown;
-  depositAmount: unknown;
-  depositPaymentType: "EFECTIVO" | "TRANSFERENCIA";
-  depositPaymentMethod: string | null;
-  depositTransferRecipientId: string | null;
-  restPaymentType: "EFECTIVO" | "TRANSFERENCIA";
-  restTransferRecipientId: string | null;
-  notes: string | null;
-}) {
-  return {
-    id: booking.id,
-    propertyId: booking.propertyId,
-    guestId: booking.guest.id,
-    checkInDate: toDateStr(booking.checkIn),
-    checkInTime: toTimeStr(booking.checkIn),
-    checkOutDate: toDateStr(booking.checkOut),
-    checkOutTime: toTimeStr(booking.checkOut),
-    pricePerNight: String(Number(booking.pricePerNight)),
-    depositAmount: String(Number(booking.depositAmount)),
-    depositPaymentType: booking.depositPaymentType,
-    depositPaymentMethod: booking.depositPaymentMethod ?? "",
-    depositRecipientId: booking.depositTransferRecipientId ?? "",
-    restPaymentType: booking.restPaymentType,
-    restRecipientId: booking.restTransferRecipientId ?? "",
-    notes: booking.notes ?? "",
-  };
 }
 
 export default async function CalendarioPage({ searchParams }: CalendarioPageProps) {
@@ -143,12 +110,8 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
     property: { id: booking.property.id, title: booking.property.title },
   }));
 
-  const propertyByBookingId = new Map(
-    events.map((event) => [event.id, event.property.id]),
-  );
-
   const chipHref = (bookingId: string): string =>
-    `/admin/propiedades/${propertyByBookingId.get(bookingId)}/agenda?reserva=${bookingId}`;
+    `/admin/reservas/nueva?reserva=${bookingId}`;
 
   const dayHref = (dayStr: string): string =>
     `${basePath}?nueva=1&fecha=${dayStr}&propiedad=${propiedadParam}`;
@@ -179,7 +142,7 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
 
   const showCreateForm = !editing && (nueva || Boolean(fecha));
   const initialValues = editing
-    ? toFormValues(editing)
+    ? bookingToFormValues(editing, editing.propertyId)
     : {
         checkInDate: fecha || toDateStr(new Date()),
         checkInTime: "12:00",
@@ -292,7 +255,7 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
           </div>
           <BookingForm
             action={updateBooking}
-            initialValues={toFormValues(editing)}
+            initialValues={bookingToFormValues(editing, editing.propertyId)}
             guests={guests.map(({ id, firstName, lastName, dni, phone }) => ({
               id,
               firstName,

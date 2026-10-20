@@ -195,8 +195,8 @@ describe("CalendarioPage", () => {
       .getAllByText(/Juan/)
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(chipLinks).toEqual([
-      "/admin/propiedades/p-1/agenda?reserva=b-1",
-      "/admin/propiedades/p-1/agenda?reserva=b-1",
+      "/admin/reservas/nueva?reserva=b-1",
+      "/admin/reservas/nueva?reserva=b-1",
     ]);
   });
 
@@ -260,7 +260,7 @@ describe("CalendarioPage", () => {
     expect(screen.getByText(/Juan Pérez —/)).toBeInTheDocument();
     expect(
       screen.getAllByRole("link", { name: "Editar" })[0].closest("a"),
-    ).toHaveAttribute("href", "/admin/propiedades/p-1/agenda?reserva=b-1");
+    ).toHaveAttribute("href", "/admin/reservas/nueva?reserva=b-1");
   });
 
   it("?reserva renders the edit form for an existing filtered booking", async () => {

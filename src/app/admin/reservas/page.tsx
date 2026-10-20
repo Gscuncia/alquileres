@@ -230,7 +230,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                     <div className="flex items-center gap-2">
                       <Button asChild variant="tertiary">
                         <Link
-                          href={`/admin/propiedades/${booking.propertyId}/agenda?reserva=${booking.id}`}
+                          href={`/admin/reservas/nueva?reserva=${booking.id}`}
                         >
                           Editar
                         </Link>

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import { toDateStr, toTimeStr } from "@/lib/datetime";
-import { BookingForm, type BookingFormValues } from "@/components/admin/BookingForm";
+import { toDateStr } from "@/lib/datetime";
+import { BookingForm } from "@/components/admin/BookingForm";
+import { bookingToFormValues } from "@/lib/booking-form-values";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { AdminPanel, AdminPageHeader } from "@/components/admin/primitives";
 import { Button } from "@/components/design-system";
@@ -14,43 +15,6 @@ const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
 interface AgendaPageProps {
   params: { id: string };
   searchParams?: { reserva?: string; fecha?: string };
-}
-
-function toFormValues(
-  booking: {
-    id: string;
-    guest: { id: string };
-    checkIn: Date;
-    checkOut: Date;
-    /** Prisma Decimal arrives here; converted once at the boundary. */
-    pricePerNight: unknown;
-    depositAmount: unknown;
-    depositPaymentType: "EFECTIVO" | "TRANSFERENCIA";
-    depositPaymentMethod: string | null;
-    depositTransferRecipientId: string | null;
-    restPaymentType: "EFECTIVO" | "TRANSFERENCIA";
-    restTransferRecipientId: string | null;
-    notes: string | null;
-  },
-  propertyId: string,
-): BookingFormValues {
-  return {
-    id: booking.id,
-    propertyId,
-    guestId: booking.guest.id,
-    checkInDate: toDateStr(booking.checkIn),
-    checkInTime: toTimeStr(booking.checkIn),
-    checkOutDate: toDateStr(booking.checkOut),
-    checkOutTime: toTimeStr(booking.checkOut),
-    pricePerNight: String(Number(booking.pricePerNight)),
-    depositAmount: String(Number(booking.depositAmount)),
-    depositPaymentType: booking.depositPaymentType,
-    depositPaymentMethod: booking.depositPaymentMethod ?? "",
-    depositRecipientId: booking.depositTransferRecipientId ?? "",
-    restPaymentType: booking.restPaymentType,
-    restRecipientId: booking.restTransferRecipientId ?? "",
-    notes: booking.notes ?? "",
-  };
 }
 
 export default async function AgendaPage({ params, searchParams }: AgendaPageProps) {
@@ -96,7 +60,7 @@ export default async function AgendaPage({ params, searchParams }: AgendaPagePro
     ? (searchParams?.fecha as string)
     : "";
   const initialValues = editing
-    ? toFormValues(editing, property.id)
+    ? bookingToFormValues(editing, property.id)
     : { checkInDate: fecha || toDateStr(new Date()), checkInTime: "12:00", checkOutTime: "10:00" };
 
   return (

@@ -209,6 +209,7 @@ model SiteSettings {
   inquiryEmail  String   @default("")
   whatsappPhone String   @default("")
   backupEmail   String   @default("") @map("backup_email")
+  backupHour    Int      @default(8) @map("backup_hour")
   updatedAt     DateTime @updatedAt
 
   @@map("site_settings")

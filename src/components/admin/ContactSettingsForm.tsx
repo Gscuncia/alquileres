@@ -13,6 +13,7 @@ interface ContactSettingsFormProps {
   initialInquiryEmail: string;
   initialWhatsappPhone: string;
   initialBackupEmail: string;
+  initialBackupHour: number;
 }
 
 export function ContactSettingsForm({
@@ -20,6 +21,7 @@ export function ContactSettingsForm({
   initialInquiryEmail,
   initialWhatsappPhone,
   initialBackupEmail,
+  initialBackupHour,
 }: ContactSettingsFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
 
@@ -84,8 +86,30 @@ export function ContactSettingsForm({
           defaultValue={initialBackupEmail}
         />
         <p className="mt-1 text-caption-sm text-muted">
-          Todos los días a las 8:00 (hora argentina) llega un mail con los CSV
-          de huéspedes y reservas. Vacío = el propio Gmail del proyecto.
+          Todos los días a la hora configurada abajo (hora argentina) llega un
+          mail con los CSV de huéspedes y reservas. Vacío = el propio Gmail del
+          proyecto.
+        </p>
+      </AdminField>
+      <AdminField
+        label="Hora de envío del backup (hora argentina)"
+        htmlFor="backupHour"
+        error={state.fieldErrors?.backupHour}
+      >
+        <AdminInput
+          as="select"
+          id="backupHour"
+          name="backupHour"
+          defaultValue={initialBackupHour}
+        >
+          {Array.from({ length: 24 }, (_, hour) => (
+            <option key={hour} value={hour}>
+              {`${hour}:00`}
+            </option>
+          ))}
+        </AdminInput>
+        <p className="mt-1 text-caption-sm text-muted">
+          El backup sale cerca de esta hora. Se envía una vez por día.
         </p>
       </AdminField>
       <div className="md:col-span-2">

@@ -31,6 +31,12 @@ const updateContactSettingsSchema = z.object({
     .email("Ingresá un email válido.")
     .optional()
     .or(z.literal("")),
+  backupHour: z.coerce
+    .number()
+    .int("La hora del backup debe estar entre 0 y 23.")
+    .min(0, "La hora del backup debe estar entre 0 y 23.")
+    .max(23, "La hora del backup debe estar entre 0 y 23.")
+    .default(8),
 });
 
 function collectFieldErrors(error: z.ZodError): Record<string, string> {
@@ -170,10 +176,19 @@ export async function updateContactSettings(
       ? (formData.get("backupEmail") as string).trim()
       : "";
 
+  // An empty select value coerces to 0 via z.coerce, so normalize it to
+  // undefined here to let the schema default kick in (8).
+  const rawBackupHour = formData.get("backupHour");
+  const backupHourInput =
+    typeof rawBackupHour === "string" && rawBackupHour.trim() !== ""
+      ? rawBackupHour.trim()
+      : undefined;
+
   const parsed = updateContactSettingsSchema.safeParse({
     inquiryEmail,
     whatsappPhone,
     backupEmail,
+    backupHour: backupHourInput,
   });
   if (!parsed.success) {
     return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
@@ -186,11 +201,13 @@ export async function updateContactSettings(
       inquiryEmail: parsed.data.inquiryEmail,
       whatsappPhone: parsed.data.whatsappPhone,
       backupEmail: parsed.data.backupEmail ?? "",
+      backupHour: parsed.data.backupHour,
     },
     update: {
       inquiryEmail: parsed.data.inquiryEmail,
       whatsappPhone: parsed.data.whatsappPhone,
       backupEmail: parsed.data.backupEmail ?? "",
+      backupHour: parsed.data.backupHour,
     },
   });
 

@@ -36,15 +36,24 @@ vi.mock("@/components/admin/ContactSettingsForm", () => ({
     initialInquiryEmail,
     initialWhatsappPhone,
     initialBackupEmail,
+    initialBackupHour,
   }: {
     initialInquiryEmail: string;
     initialWhatsappPhone: string;
     initialBackupEmail: string;
+    initialBackupHour: number;
   }) => (
     <div data-testid="contact-settings-form">
       <input data-testid="inquiry-email-input" defaultValue={initialInquiryEmail} readOnly />
       <input data-testid="whatsapp-phone-input" defaultValue={initialWhatsappPhone} readOnly />
       <input data-testid="backup-email-input" defaultValue={initialBackupEmail} readOnly />
+      <select data-testid="backup-hour-select" defaultValue={initialBackupHour} disabled>
+        {Array.from({ length: 24 }, (_, hour) => (
+          <option key={hour} value={hour}>
+            {`${hour}:00`}
+          </option>
+        ))}
+      </select>
     </div>
   ),
 }));
@@ -93,6 +102,7 @@ describe("UsuariosPage", () => {
       inquiryEmail: "contacto@alquileresanita.com.ar",
       whatsappPhone: "5491155052228",
       backupEmail: "backups@alquileresanita.com.ar",
+      backupHour: 9,
     });
   });
 
@@ -167,5 +177,8 @@ describe("UsuariosPage", () => {
 
     const backupInput = screen.getByTestId("backup-email-input") as HTMLInputElement;
     expect(backupInput.value).toBe("backups@alquileresanita.com.ar");
+
+    const hourSelect = screen.getByTestId("backup-hour-select") as HTMLSelectElement;
+    expect(hourSelect.value).toBe("9");
   });
 });

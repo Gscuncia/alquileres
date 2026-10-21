@@ -5,6 +5,17 @@ export interface ContactSettings {
   inquiryEmail: string;
   whatsappPhone: string;
   backupEmail: string;
+  backupHour: number;
+}
+
+const DEFAULT_BACKUP_HOUR = 8;
+
+function pickBackupHour(persisted: unknown): number {
+  return Number.isInteger(persisted) &&
+    (persisted as number) >= 0 &&
+    (persisted as number) <= 23
+    ? (persisted as number)
+    : DEFAULT_BACKUP_HOUR;
 }
 
 function trimEnv(value: string | undefined): string {
@@ -28,11 +39,17 @@ export async function getContactSettings(): Promise<ContactSettings> {
     inquiryEmail: string;
     whatsappPhone: string;
     backupEmail: string;
+    backupHour: number;
   } | null = null;
   try {
     persisted = await prisma.siteSettings.findUnique({
       where: { id: "default" },
-      select: { inquiryEmail: true, whatsappPhone: true, backupEmail: true },
+      select: {
+        inquiryEmail: true,
+        whatsappPhone: true,
+        backupEmail: true,
+        backupHour: true,
+      },
     });
   } catch {
     persisted = null;
@@ -50,5 +67,6 @@ export async function getContactSettings(): Promise<ContactSettings> {
       trimEnv(process.env.GMAIL_USER),
       DEFAULT_CONTACT_EMAIL,
     ),
+    backupHour: pickBackupHour(persisted?.backupHour),
   };
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { buildBackupCsvs } from "@/lib/backup";
 import { getContactSettings } from "@/lib/site-settings";
 import { sendBackupEmail } from "@/lib/mail";
-import { toDateStr } from "@/lib/datetime";
+import { toDateStr, toTimeStr } from "@/lib/datetime";
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -26,8 +26,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
+    const currentHour = Number(toTimeStr(new Date()).slice(0, 2));
+    const { backupEmail, backupHour } = await getContactSettings();
+
+    // The scheduler ticks hourly; only build/send on the configured hour so
+    // the remaining 23 ticks stay cheap no-ops.
+    if (currentHour !== backupHour) {
+      return NextResponse.json({ ok: true, skipped: true, currentHour, backupHour });
+    }
+
     const backup = await buildBackupCsvs();
-    const { backupEmail } = await getContactSettings();
     await sendBackupEmail(backupEmail, toDateStr(new Date()), backup);
 
     return NextResponse.json({

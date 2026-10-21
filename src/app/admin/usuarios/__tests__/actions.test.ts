@@ -236,6 +236,7 @@ describe("user actions", () => {
         inquiryEmail: "consultas@alquileresanita.com.ar",
         whatsappPhone: "5491155052228",
         backupEmail: "",
+        backupHour: "8",
       };
       const formData = new FormData();
       for (const [key, value] of Object.entries({ ...defaults, ...overrides })) {
@@ -269,11 +270,13 @@ describe("user actions", () => {
           inquiryEmail: "consultas@alquileresanita.com.ar",
           whatsappPhone: "5491155052228",
           backupEmail: "",
+          backupHour: 8,
         },
         update: {
           inquiryEmail: "consultas@alquileresanita.com.ar",
           whatsappPhone: "5491155052228",
           backupEmail: "",
+          backupHour: 8,
         },
       });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/contacto");
@@ -335,6 +338,43 @@ describe("user actions", () => {
       const upsertCall = mocks.siteSettingsUpsert.mock.calls[0][0];
       expect(upsertCall.create.backupEmail).toBe("backup@otro.com");
       expect(upsertCall.update.backupEmail).toBe("backup@otro.com");
+    });
+
+    it("saves a valid backupHour in the upsert", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ backupHour: "15" }),
+      );
+
+      expect(result.ok).toBe(true);
+      const upsertCall = mocks.siteSettingsUpsert.mock.calls[0][0];
+      expect(upsertCall.create.backupHour).toBe(15);
+      expect(upsertCall.update.backupHour).toBe(15);
+    });
+
+    it("defaults the backupHour to 8 when the field is an empty string", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ backupHour: "" }),
+      );
+
+      expect(result.ok).toBe(true);
+      const upsertCall = mocks.siteSettingsUpsert.mock.calls[0][0];
+      expect(upsertCall.create.backupHour).toBe(8);
+      expect(upsertCall.update.backupHour).toBe(8);
+    });
+
+    it("rejects a backupHour above 23 with a Spanish field error", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ backupHour: "24" }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.backupHour).toBe(
+        "La hora del backup debe estar entre 0 y 23.",
+      );
+      expect(mocks.siteSettingsUpsert).not.toHaveBeenCalled();
     });
   });
 });

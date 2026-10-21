@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   buildBackupCsvs: vi.fn(),
   sendBackupEmail: vi.fn(),
   getContactSettings: vi.fn(),
+  toTimeStr: vi.fn(),
+  toDateStr: vi.fn(),
 }));
 
 vi.mock("@/lib/backup", () => ({
@@ -17,6 +19,11 @@ vi.mock("@/lib/mail", () => ({
 
 vi.mock("@/lib/site-settings", () => ({
   getContactSettings: () => mocks.getContactSettings(),
+}));
+
+vi.mock("@/lib/datetime", () => ({
+  toTimeStr: (date: Date) => mocks.toTimeStr(date),
+  toDateStr: (date: Date) => mocks.toDateStr(date),
 }));
 
 import { GET } from "@/app/api/cron/backup/route";
@@ -48,7 +55,10 @@ describe("GET /api/cron/backup", () => {
       inquiryEmail: "contacto@alquileresanita.com.ar",
       whatsappPhone: "5491155052228",
       backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
     });
+    mocks.toTimeStr.mockReturnValue("08:00");
+    mocks.toDateStr.mockReturnValue("2026-10-21");
   });
 
   it("returns 401 without the Authorization header", async () => {
@@ -108,5 +118,52 @@ describe("GET /api/cron/backup", () => {
     expect(mocks.sendBackupEmail).not.toHaveBeenCalled();
 
     errorSpy.mockRestore();
+  });
+
+  it("skips without building or sending when the current BA hour differs from the configured one", async () => {
+    mocks.toTimeStr.mockReturnValue("09:00");
+    mocks.getContactSettings.mockResolvedValue({
+      inquiryEmail: "contacto@alquileresanita.com.ar",
+      whatsappPhone: "5491155052228",
+      backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
+    });
+
+    const response = await GET(requestWith("Bearer secret-token"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      skipped: true,
+      currentHour: 9,
+      backupHour: 8,
+    });
+    expect(mocks.buildBackupCsvs).not.toHaveBeenCalled();
+    expect(mocks.sendBackupEmail).not.toHaveBeenCalled();
+  });
+
+  it("sends the backup when the current BA hour matches the configured one", async () => {
+    mocks.toTimeStr.mockReturnValue("15:30");
+    mocks.getContactSettings.mockResolvedValue({
+      inquiryEmail: "contacto@alquileresanita.com.ar",
+      whatsappPhone: "5491155052228",
+      backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 15,
+    });
+
+    const response = await GET(requestWith("Bearer secret-token"));
+
+    expect(response.status).toBe(200);
+    expect(mocks.buildBackupCsvs).toHaveBeenCalled();
+    expect(mocks.sendBackupEmail).toHaveBeenCalledWith(
+      "backup@alquileresanita.com.ar",
+      "2026-10-21",
+      backup,
+    );
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      guests: 7,
+      bookings: 3,
+    });
   });
 });

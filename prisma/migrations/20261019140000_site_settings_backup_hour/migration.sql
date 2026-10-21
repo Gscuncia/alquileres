@@ -1,0 +1,1 @@
+ALTER TABLE "site_settings" ADD COLUMN "backup_hour" INTEGER NOT NULL DEFAULT 8;

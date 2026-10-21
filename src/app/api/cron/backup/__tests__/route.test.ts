@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getContactSettings: vi.fn(),
   toTimeStr: vi.fn(),
   toDateStr: vi.fn(),
+  siteSettingsUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/backup", () => ({
@@ -24,6 +25,14 @@ vi.mock("@/lib/site-settings", () => ({
 vi.mock("@/lib/datetime", () => ({
   toTimeStr: (date: Date) => mocks.toTimeStr(date),
   toDateStr: (date: Date) => mocks.toDateStr(date),
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    siteSettings: {
+      update: (...args: unknown[]) => mocks.siteSettingsUpdate(...args),
+    },
+  },
 }));
 
 import { GET } from "@/app/api/cron/backup/route";
@@ -51,11 +60,13 @@ describe("GET /api/cron/backup", () => {
     process.env.CRON_SECRET = "secret-token";
     mocks.buildBackupCsvs.mockResolvedValue(backup);
     mocks.sendBackupEmail.mockResolvedValue(undefined);
+    mocks.siteSettingsUpdate.mockResolvedValue({});
     mocks.getContactSettings.mockResolvedValue({
       inquiryEmail: "contacto@alquileresanita.com.ar",
       whatsappPhone: "5491155052228",
       backupEmail: "backup@alquileresanita.com.ar",
       backupHour: 8,
+      lastBackupSentAt: null,
     });
     mocks.toTimeStr.mockReturnValue("08:00");
     mocks.toDateStr.mockReturnValue("2026-10-21");
@@ -87,7 +98,7 @@ describe("GET /api/cron/backup", () => {
     });
   });
 
-  it("sends the backup email and returns the counts with a valid header", async () => {
+  it("sends the backup email, persists lastBackupSentAt, and returns the counts with a valid header", async () => {
     const response = await GET(requestWith("Bearer secret-token"));
 
     expect(response.status).toBe(200);
@@ -97,6 +108,10 @@ describe("GET /api/cron/backup", () => {
       expect.any(String),
       backup,
     );
+    expect(mocks.siteSettingsUpdate).toHaveBeenCalledWith({
+      where: { id: "default" },
+      data: { lastBackupSentAt: expect.any(Date) },
+    });
     await expect(response.json()).resolves.toEqual({
       ok: true,
       guests: 7,
@@ -120,13 +135,14 @@ describe("GET /api/cron/backup", () => {
     errorSpy.mockRestore();
   });
 
-  it("skips without building or sending when the current BA hour differs from the configured one", async () => {
-    mocks.toTimeStr.mockReturnValue("09:00");
+  it("skips without building or sending when the current BA hour is before the configured one", async () => {
+    mocks.toTimeStr.mockReturnValue("07:00");
     mocks.getContactSettings.mockResolvedValue({
       inquiryEmail: "contacto@alquileresanita.com.ar",
       whatsappPhone: "5491155052228",
       backupEmail: "backup@alquileresanita.com.ar",
       backupHour: 8,
+      lastBackupSentAt: null,
     });
 
     const response = await GET(requestWith("Bearer secret-token"));
@@ -135,20 +151,22 @@ describe("GET /api/cron/backup", () => {
     await expect(response.json()).resolves.toEqual({
       ok: true,
       skipped: true,
-      currentHour: 9,
+      currentHour: 7,
       backupHour: 8,
+      sentToday: false,
     });
     expect(mocks.buildBackupCsvs).not.toHaveBeenCalled();
     expect(mocks.sendBackupEmail).not.toHaveBeenCalled();
   });
 
-  it("sends the backup when the current BA hour matches the configured one", async () => {
+  it("sends on a delayed tick at-or-after the configured hour and persists lastBackupSentAt", async () => {
     mocks.toTimeStr.mockReturnValue("15:30");
     mocks.getContactSettings.mockResolvedValue({
       inquiryEmail: "contacto@alquileresanita.com.ar",
       whatsappPhone: "5491155052228",
       backupEmail: "backup@alquileresanita.com.ar",
       backupHour: 15,
+      lastBackupSentAt: null,
     });
 
     const response = await GET(requestWith("Bearer secret-token"));
@@ -160,10 +178,54 @@ describe("GET /api/cron/backup", () => {
       "2026-10-21",
       backup,
     );
+    expect(mocks.siteSettingsUpdate).toHaveBeenCalledWith({
+      where: { id: "default" },
+      data: { lastBackupSentAt: expect.any(Date) },
+    });
     await expect(response.json()).resolves.toEqual({
       ok: true,
       guests: 7,
       bookings: 3,
     });
+  });
+
+  it("skips when the backup was already sent today even though the hour matches", async () => {
+    mocks.getContactSettings.mockResolvedValue({
+      inquiryEmail: "contacto@alquileresanita.com.ar",
+      whatsappPhone: "5491155052228",
+      backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
+      lastBackupSentAt: new Date("2026-10-21T11:00:00.000Z"),
+    });
+
+    const response = await GET(requestWith("Bearer secret-token"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      skipped: true,
+      currentHour: 8,
+      backupHour: 8,
+      sentToday: true,
+    });
+    expect(mocks.buildBackupCsvs).not.toHaveBeenCalled();
+    expect(mocks.sendBackupEmail).not.toHaveBeenCalled();
+    expect(mocks.siteSettingsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 and does not persist lastBackupSentAt when the send throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.sendBackupEmail.mockRejectedValue(new Error("smtp down"));
+
+    const response = await GET(requestWith("Bearer secret-token"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Error generando el backup",
+    });
+    expect(mocks.sendBackupEmail).toHaveBeenCalled();
+    expect(mocks.siteSettingsUpdate).not.toHaveBeenCalled();
+
+    errorSpy.mockRestore();
   });
 });

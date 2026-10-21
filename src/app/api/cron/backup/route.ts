@@ -3,6 +3,7 @@ import { buildBackupCsvs } from "@/lib/backup";
 import { getContactSettings } from "@/lib/site-settings";
 import { sendBackupEmail } from "@/lib/mail";
 import { toDateStr, toTimeStr } from "@/lib/datetime";
+import { prisma } from "@/lib/prisma";
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -26,17 +27,31 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const currentHour = Number(toTimeStr(new Date()).slice(0, 2));
-    const { backupEmail, backupHour } = await getContactSettings();
+    const now = new Date();
+    const currentHour = Number(toTimeStr(now).slice(0, 2));
+    const { backupEmail, backupHour, lastBackupSentAt } =
+      await getContactSettings();
 
-    // The scheduler ticks hourly; only build/send on the configured hour so
-    // the remaining 23 ticks stay cheap no-ops.
-    if (currentHour !== backupHour) {
-      return NextResponse.json({ ok: true, skipped: true, currentHour, backupHour });
+    // The scheduler ticks hourly and may run late (e.g. 14:05 when the
+    // configured hour is 13), so instead of matching an exact hour we send on
+    // the FIRST tick at-or-after the configured hour, once per BA calendar
+    // day, tracked via the persisted lastBackupSentAt timestamp. A failed
+    // send is retried on the next tick because the timestamp is only
+    // persisted on success.
+    const todayBa = toDateStr(now);
+    const sentToday =
+      lastBackupSentAt !== null && toDateStr(lastBackupSentAt) === todayBa;
+    if (currentHour < backupHour || sentToday) {
+      return NextResponse.json({ ok: true, skipped: true, currentHour, backupHour, sentToday });
     }
 
     const backup = await buildBackupCsvs();
-    await sendBackupEmail(backupEmail, toDateStr(new Date()), backup);
+    await sendBackupEmail(backupEmail, todayBa, backup);
+
+    await prisma.siteSettings.update({
+      where: { id: "default" },
+      data: { lastBackupSentAt: now },
+    });
 
     return NextResponse.json({
       ok: true,

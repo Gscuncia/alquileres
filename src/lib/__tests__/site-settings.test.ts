@@ -27,13 +27,45 @@ describe("getContactSettings", () => {
       inquiryEmail: "nuevo@alquileresanita.com.ar",
       whatsappPhone: "5491100000000",
       backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
     });
 
     await expect(getContactSettings()).resolves.toEqual({
       inquiryEmail: "nuevo@alquileresanita.com.ar",
       whatsappPhone: "5491100000000",
       backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
+      lastBackupSentAt: null,
     });
+  });
+
+  it("passes through a valid lastBackupSentAt date", async () => {
+    const sentAt = new Date("2026-10-21T11:00:00.000Z");
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
+      lastBackupSentAt: sentAt,
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.lastBackupSentAt).toBe(sentAt);
+  });
+
+  it("returns null lastBackupSentAt when the persisted value is invalid", async () => {
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "backup@alquileresanita.com.ar",
+      backupHour: 8,
+      lastBackupSentAt: "not-a-date",
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.lastBackupSentAt).toBeNull();
   });
 
   it("queries the default singleton row", async () => {
@@ -43,7 +75,13 @@ describe("getContactSettings", () => {
 
     expect(mocks.siteSettingsFindUnique).toHaveBeenCalledWith({
       where: { id: "default" },
-      select: { inquiryEmail: true, whatsappPhone: true, backupEmail: true },
+      select: {
+        inquiryEmail: true,
+        whatsappPhone: true,
+        backupEmail: true,
+        backupHour: true,
+        lastBackupSentAt: true,
+      },
     });
   });
 
@@ -118,6 +156,8 @@ describe("getContactSettings", () => {
       inquiryEmail: DEFAULT_CONTACT_EMAIL,
       whatsappPhone: WHATSAPP_NUMBER,
       backupEmail: DEFAULT_CONTACT_EMAIL,
+      backupHour: 8,
+      lastBackupSentAt: null,
     });
   });
 
@@ -128,6 +168,8 @@ describe("getContactSettings", () => {
       inquiryEmail: DEFAULT_CONTACT_EMAIL,
       whatsappPhone: WHATSAPP_NUMBER,
       backupEmail: DEFAULT_CONTACT_EMAIL,
+      backupHour: 8,
+      lastBackupSentAt: null,
     });
   });
 
@@ -138,5 +180,56 @@ describe("getContactSettings", () => {
     const settings = await getContactSettings();
 
     expect(settings.inquiryEmail).toBe("env@fallback.com");
+  });
+
+  it("uses the persisted backupHour when it is a valid integer 0..23", async () => {
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "",
+      backupHour: 15,
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupHour).toBe(15);
+  });
+
+  it("falls back to 8 when the persisted backupHour is out of range", async () => {
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "",
+      backupHour: 24,
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupHour).toBe(8);
+  });
+
+  it("falls back to 8 when the persisted backupHour is not an integer", async () => {
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "",
+      backupHour: 7.5,
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupHour).toBe(8);
+  });
+
+  it("falls back to 8 when the persisted backupHour is missing", async () => {
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "",
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupHour).toBe(8);
   });
 });

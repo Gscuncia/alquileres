@@ -6,6 +6,7 @@ export interface ContactSettings {
   whatsappPhone: string;
   backupEmail: string;
   backupHour: number;
+  lastBackupSentAt: Date | null;
 }
 
 const DEFAULT_BACKUP_HOUR = 8;
@@ -40,6 +41,7 @@ export async function getContactSettings(): Promise<ContactSettings> {
     whatsappPhone: string;
     backupEmail: string;
     backupHour: number;
+    lastBackupSentAt: Date | null;
   } | null = null;
   try {
     persisted = await prisma.siteSettings.findUnique({
@@ -49,6 +51,7 @@ export async function getContactSettings(): Promise<ContactSettings> {
         whatsappPhone: true,
         backupEmail: true,
         backupHour: true,
+        lastBackupSentAt: true,
       },
     });
   } catch {
@@ -68,5 +71,9 @@ export async function getContactSettings(): Promise<ContactSettings> {
       DEFAULT_CONTACT_EMAIL,
     ),
     backupHour: pickBackupHour(persisted?.backupHour),
+    lastBackupSentAt:
+      persisted?.lastBackupSentAt instanceof Date
+        ? persisted.lastBackupSentAt
+        : null,
   };
 }

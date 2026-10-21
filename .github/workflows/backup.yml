@@ -1,0 +1,21 @@
+name: daily-backup
+
+# Hourly trigger: the app's cron endpoint compares the current Buenos Aires
+# hour against the hour configured in the admin panel (site_settings) and
+# only sends the backup when they match — one send per day, at the chosen
+# hour. NOTE: GitHub disables scheduled workflows after 60 days of repo
+# inactivity; any push re-activates them.
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backup endpoint
+        run: |
+          curl -sS --fail-with-body \
+            -H "Authorization: Bearer ${{ secrets.BACKUP_CRON_SECRET }}" \
+            https://alquileres-sepia.vercel.app/api/cron/backup

@@ -19,17 +19,20 @@ describe("getContactSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.CONTACT_EMAIL;
+    delete process.env.GMAIL_USER;
   });
 
   it("returns persisted values when they are non-empty", async () => {
     mocks.siteSettingsFindUnique.mockResolvedValue({
       inquiryEmail: "nuevo@alquileresanita.com.ar",
       whatsappPhone: "5491100000000",
+      backupEmail: "backup@alquileresanita.com.ar",
     });
 
     await expect(getContactSettings()).resolves.toEqual({
       inquiryEmail: "nuevo@alquileresanita.com.ar",
       whatsappPhone: "5491100000000",
+      backupEmail: "backup@alquileresanita.com.ar",
     });
   });
 
@@ -40,7 +43,7 @@ describe("getContactSettings", () => {
 
     expect(mocks.siteSettingsFindUnique).toHaveBeenCalledWith({
       where: { id: "default" },
-      select: { inquiryEmail: true, whatsappPhone: true },
+      select: { inquiryEmail: true, whatsappPhone: true, backupEmail: true },
     });
   });
 
@@ -49,6 +52,7 @@ describe("getContactSettings", () => {
     mocks.siteSettingsFindUnique.mockResolvedValue({
       inquiryEmail: "",
       whatsappPhone: "5491100000000",
+      backupEmail: "",
     });
 
     const settings = await getContactSettings();
@@ -61,11 +65,50 @@ describe("getContactSettings", () => {
     mocks.siteSettingsFindUnique.mockResolvedValue({
       inquiryEmail: "nuevo@alquileresanita.com.ar",
       whatsappPhone: "",
+      backupEmail: "",
     });
 
     const settings = await getContactSettings();
 
     expect(settings.whatsappPhone).toBe(WHATSAPP_NUMBER);
+  });
+
+  it("uses the persisted backupEmail when it is non-empty", async () => {
+    process.env.GMAIL_USER = "gmail@example.com";
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "  backup@otro.com  ",
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupEmail).toBe("backup@otro.com");
+  });
+
+  it("falls back to GMAIL_USER when the persisted backupEmail is empty", async () => {
+    process.env.GMAIL_USER = " gmail@example.com ";
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "",
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupEmail).toBe("gmail@example.com");
+  });
+
+  it("falls back to the default contact email when the persisted backupEmail and GMAIL_USER are empty", async () => {
+    mocks.siteSettingsFindUnique.mockResolvedValue({
+      inquiryEmail: "nuevo@alquileresanita.com.ar",
+      whatsappPhone: "5491100000000",
+      backupEmail: "",
+    });
+
+    const settings = await getContactSettings();
+
+    expect(settings.backupEmail).toBe(DEFAULT_CONTACT_EMAIL);
   });
 
   it("falls back to the constants when there is no row and no env", async () => {
@@ -74,6 +117,7 @@ describe("getContactSettings", () => {
     await expect(getContactSettings()).resolves.toEqual({
       inquiryEmail: DEFAULT_CONTACT_EMAIL,
       whatsappPhone: WHATSAPP_NUMBER,
+      backupEmail: DEFAULT_CONTACT_EMAIL,
     });
   });
 
@@ -83,6 +127,7 @@ describe("getContactSettings", () => {
     await expect(getContactSettings()).resolves.toEqual({
       inquiryEmail: DEFAULT_CONTACT_EMAIL,
       whatsappPhone: WHATSAPP_NUMBER,
+      backupEmail: DEFAULT_CONTACT_EMAIL,
     });
   });
 

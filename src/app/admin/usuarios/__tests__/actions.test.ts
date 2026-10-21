@@ -235,6 +235,7 @@ describe("user actions", () => {
       const defaults: Record<string, string> = {
         inquiryEmail: "consultas@alquileresanita.com.ar",
         whatsappPhone: "5491155052228",
+        backupEmail: "",
       };
       const formData = new FormData();
       for (const [key, value] of Object.entries({ ...defaults, ...overrides })) {
@@ -267,10 +268,12 @@ describe("user actions", () => {
           id: "default",
           inquiryEmail: "consultas@alquileresanita.com.ar",
           whatsappPhone: "5491155052228",
+          backupEmail: "",
         },
         update: {
           inquiryEmail: "consultas@alquileresanita.com.ar",
           whatsappPhone: "5491155052228",
+          backupEmail: "",
         },
       });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/contacto");
@@ -297,6 +300,41 @@ describe("user actions", () => {
       expect(result.ok).toBe(false);
       expect(result.fieldErrors?.whatsappPhone).toMatch(/entre 8 y 15 dígitos/i);
       expect(mocks.siteSettingsUpsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects an invalid backupEmail with a Spanish field error", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ backupEmail: "not-an-email" }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.backupEmail).toMatch(/email válido/i);
+      expect(mocks.siteSettingsUpsert).not.toHaveBeenCalled();
+    });
+
+    it("saves an empty backupEmail as an empty string", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData(),
+      );
+
+      expect(result.ok).toBe(true);
+      const upsertCall = mocks.siteSettingsUpsert.mock.calls[0][0];
+      expect(upsertCall.create.backupEmail).toBe("");
+      expect(upsertCall.update.backupEmail).toBe("");
+    });
+
+    it("saves a valid backupEmail in the upsert", async () => {
+      const result = await updateContactSettings(
+        initialState,
+        buildContactFormData({ backupEmail: "backup@otro.com" }),
+      );
+
+      expect(result.ok).toBe(true);
+      const upsertCall = mocks.siteSettingsUpsert.mock.calls[0][0];
+      expect(upsertCall.create.backupEmail).toBe("backup@otro.com");
+      expect(upsertCall.update.backupEmail).toBe("backup@otro.com");
     });
   });
 });

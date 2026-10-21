@@ -25,6 +25,12 @@ const updateContactSettingsSchema = z.object({
   whatsappPhone: z
     .string()
     .regex(/^\d{8,15}$/, "El WhatsApp debe tener entre 8 y 15 dígitos."),
+  backupEmail: z
+    .string()
+    .trim()
+    .email("Ingresá un email válido.")
+    .optional()
+    .or(z.literal("")),
 });
 
 function collectFieldErrors(error: z.ZodError): Record<string, string> {
@@ -159,9 +165,15 @@ export async function updateContactSettings(
     .replace(/[\s\-+]/g, "")
     .trim();
 
+  const backupEmail =
+    typeof formData.get("backupEmail") === "string"
+      ? (formData.get("backupEmail") as string).trim()
+      : "";
+
   const parsed = updateContactSettingsSchema.safeParse({
     inquiryEmail,
     whatsappPhone,
+    backupEmail,
   });
   if (!parsed.success) {
     return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
@@ -173,10 +185,12 @@ export async function updateContactSettings(
       id: "default",
       inquiryEmail: parsed.data.inquiryEmail,
       whatsappPhone: parsed.data.whatsappPhone,
+      backupEmail: parsed.data.backupEmail ?? "",
     },
     update: {
       inquiryEmail: parsed.data.inquiryEmail,
       whatsappPhone: parsed.data.whatsappPhone,
+      backupEmail: parsed.data.backupEmail ?? "",
     },
   });
 

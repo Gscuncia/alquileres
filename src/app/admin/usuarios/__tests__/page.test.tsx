@@ -35,13 +35,16 @@ vi.mock("@/components/admin/ContactSettingsForm", () => ({
   ContactSettingsForm: ({
     initialInquiryEmail,
     initialWhatsappPhone,
+    initialBackupEmail,
   }: {
     initialInquiryEmail: string;
     initialWhatsappPhone: string;
+    initialBackupEmail: string;
   }) => (
     <div data-testid="contact-settings-form">
       <input data-testid="inquiry-email-input" defaultValue={initialInquiryEmail} readOnly />
       <input data-testid="whatsapp-phone-input" defaultValue={initialWhatsappPhone} readOnly />
+      <input data-testid="backup-email-input" defaultValue={initialBackupEmail} readOnly />
     </div>
   ),
 }));
@@ -89,6 +92,7 @@ describe("UsuariosPage", () => {
     mocks.getContactSettings.mockResolvedValue({
       inquiryEmail: "contacto@alquileresanita.com.ar",
       whatsappPhone: "5491155052228",
+      backupEmail: "backups@alquileresanita.com.ar",
     });
   });
 
@@ -160,5 +164,8 @@ describe("UsuariosPage", () => {
 
     const whatsappInput = screen.getByTestId("whatsapp-phone-input") as HTMLInputElement;
     expect(whatsappInput.value).toBe("5491155052228");
+
+    const backupInput = screen.getByTestId("backup-email-input") as HTMLInputElement;
+    expect(backupInput.value).toBe("backups@alquileresanita.com.ar");
   });
 });

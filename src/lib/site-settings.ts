@@ -4,6 +4,7 @@ import { WHATSAPP_NUMBER, DEFAULT_CONTACT_EMAIL } from "@/lib/contact";
 export interface ContactSettings {
   inquiryEmail: string;
   whatsappPhone: string;
+  backupEmail: string;
 }
 
 function trimEnv(value: string | undefined): string {
@@ -23,11 +24,15 @@ function pick(persisted: string, envValue: string, constant: string): string {
  * env/constant fallbacks.
  */
 export async function getContactSettings(): Promise<ContactSettings> {
-  let persisted: { inquiryEmail: string; whatsappPhone: string } | null = null;
+  let persisted: {
+    inquiryEmail: string;
+    whatsappPhone: string;
+    backupEmail: string;
+  } | null = null;
   try {
     persisted = await prisma.siteSettings.findUnique({
       where: { id: "default" },
-      select: { inquiryEmail: true, whatsappPhone: true },
+      select: { inquiryEmail: true, whatsappPhone: true, backupEmail: true },
     });
   } catch {
     persisted = null;
@@ -40,5 +45,10 @@ export async function getContactSettings(): Promise<ContactSettings> {
       DEFAULT_CONTACT_EMAIL,
     ),
     whatsappPhone: pick(persisted?.whatsappPhone ?? "", "", WHATSAPP_NUMBER),
+    backupEmail: pick(
+      persisted?.backupEmail ?? "",
+      trimEnv(process.env.GMAIL_USER),
+      DEFAULT_CONTACT_EMAIL,
+    ),
   };
 }

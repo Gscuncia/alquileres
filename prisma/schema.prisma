@@ -208,6 +208,7 @@ model SiteSettings {
   id            String   @id @default("default")
   inquiryEmail  String   @default("")
   whatsappPhone String   @default("")
+  backupEmail   String   @default("") @map("backup_email")
   updatedAt     DateTime @updatedAt
 
   @@map("site_settings")

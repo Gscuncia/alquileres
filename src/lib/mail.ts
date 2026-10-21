@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter, SendMailOptions } from "nodemailer";
+import type { BackupData } from "@/lib/backup";
 
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
@@ -72,7 +73,43 @@ export async function sendWelcomeEmail(
   } else {
     // eslint-disable-next-line no-console
     console.warn(
-      `[mail] SMTP not configured. Welcome email would have been sent to ${email}`,
+      `[mail] SMTP not configured. Reset email would have been sent to ${email}`,
+    );
+  }
+}
+
+/**
+ * Send the daily backup email with the guests and bookings CSVs attached.
+ * Falls back to logging the message in development when SMTP is not configured.
+ */
+export async function sendBackupEmail(
+  to: string,
+  dateStr: string,
+  backup: BackupData,
+): Promise<void> {
+  const mailOptions: SendMailOptions = {
+    from: `"Alquileres Anita" <${GMAIL_USER ?? "no-reply@alquileresanita.com.ar"}>`,
+    to,
+    subject: `Backup Alquileres Anita ${dateStr}`,
+    text: "Adjuntamos el backup diario de huéspedes y reservas.",
+    attachments: [
+      {
+        filename: `huespedes-${dateStr}.csv`,
+        content: backup.guests,
+      },
+      {
+        filename: `reservas-${dateStr}.csv`,
+        content: backup.bookings,
+      },
+    ],
+  };
+
+  if (transporter) {
+    await transporter.sendMail(mailOptions);
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[mail] SMTP not configured. Backup email would have been sent to ${to}`,
     );
   }
 }

@@ -67,6 +67,7 @@ export default async function UsuariosPage({ searchParams }: UsuariosPageProps) 
           action={updateContactSettings}
           initialInquiryEmail={contactSettings.inquiryEmail}
           initialWhatsappPhone={contactSettings.whatsappPhone}
+          initialBackupEmail={contactSettings.backupEmail}
         />
       </AdminPanel>
 

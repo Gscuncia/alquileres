@@ -12,12 +12,14 @@ interface ContactSettingsFormProps {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   initialInquiryEmail: string;
   initialWhatsappPhone: string;
+  initialBackupEmail: string;
 }
 
 export function ContactSettingsForm({
   action,
   initialInquiryEmail,
   initialWhatsappPhone,
+  initialBackupEmail,
 }: ContactSettingsFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
 
@@ -68,6 +70,22 @@ export function ContactSettingsForm({
         <p className="mt-1 text-caption-sm text-muted">
           Código país + número, solo dígitos (ej.: 5491155052228). Aparece en los
           botones de contacto de cada propiedad y en «Contacto».
+        </p>
+      </AdminField>
+      <AdminField
+        label="Email donde llegan los backups"
+        htmlFor="backupEmail"
+        error={state.fieldErrors?.backupEmail}
+      >
+        <AdminInput
+          id="backupEmail"
+          name="backupEmail"
+          type="email"
+          defaultValue={initialBackupEmail}
+        />
+        <p className="mt-1 text-caption-sm text-muted">
+          Todos los días a las 8:00 (hora argentina) llega un mail con los CSV
+          de huéspedes y reservas. Vacío = el propio Gmail del proyecto.
         </p>
       </AdminField>
       <div className="md:col-span-2">

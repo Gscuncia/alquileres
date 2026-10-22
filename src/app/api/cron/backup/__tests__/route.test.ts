@@ -40,8 +40,10 @@ import { GET } from "@/app/api/cron/backup/route";
 const backup = {
   guests: "csv-guests",
   bookings: "csv-bookings",
+  expenses: "csv-gastos",
   guestCount: 7,
   bookingCount: 3,
+  expenseCount: 2,
 };
 
 function requestWith(header?: string): Request {
@@ -116,6 +118,7 @@ describe("GET /api/cron/backup", () => {
       ok: true,
       guests: 7,
       bookings: 3,
+      gastos: 2,
     });
   });
 
@@ -186,6 +189,7 @@ describe("GET /api/cron/backup", () => {
       ok: true,
       guests: 7,
       bookings: 3,
+      gastos: 2,
     });
   });
 

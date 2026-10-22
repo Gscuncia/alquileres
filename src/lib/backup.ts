@@ -1,5 +1,7 @@
 import type {
   Booking,
+  Expense,
+  ExpenseType,
   Guest,
   Property,
   TransferRecipient,
@@ -12,8 +14,10 @@ const BOM = "\uFEFF";
 export interface BackupData {
   guests: string;
   bookings: string;
+  expenses: string;
   guestCount: number;
   bookingCount: number;
+  expenseCount: number;
 }
 
 type BookingWithRelations = Booking & {
@@ -21,6 +25,11 @@ type BookingWithRelations = Booking & {
   guest: Guest;
   depositTransferRecipient: TransferRecipient | null;
   restTransferRecipient: TransferRecipient | null;
+};
+
+type ExpenseWithRelations = Expense & {
+  property: Property | null;
+  expenseType: ExpenseType;
 };
 
 /**
@@ -124,9 +133,44 @@ export function buildBookingsCsv(rows: BookingWithRelations[]): string {
   );
 }
 
+/** Pure builder: expenses CSV rows, not prefixed with BOM. */
+export function buildExpensesCsvRows(rows: ExpenseWithRelations[]): string[][] {
+  // Same date display as the gastos admin list (dd/mm/yyyy in BA time).
+  const dateDisplayOptions: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  };
+
+  return rows.map((expense) => [
+    expense.id,
+    expense.expenseType.name,
+    expense.property?.title ?? "",
+    expense.category,
+    String(Number(expense.amount)),
+    formatInTz(expense.date, dateDisplayOptions),
+    expense.description ?? "",
+  ]);
+}
+
+export function buildExpensesCsv(rows: ExpenseWithRelations[]): string {
+  return toCsv(
+    [
+      "Id",
+      "Tipo",
+      "Propiedad",
+      "Categoría",
+      "Importe",
+      "Fecha",
+      "Descripción",
+    ],
+    buildExpensesCsvRows(rows),
+  );
+}
+
 /**
- * Loads guests and bookings from the database and builds the two daily
- * backup CSVs (BOM-prefixed UTF-8).
+ * Loads guests, bookings and expenses from the database and builds the three
+ * daily backup CSVs (BOM-prefixed UTF-8).
  */
 export async function buildBackupCsvs(): Promise<BackupData> {
   const guests = await prisma.guest.findMany({
@@ -143,10 +187,17 @@ export async function buildBackupCsvs(): Promise<BackupData> {
     orderBy: { checkIn: "asc" },
   });
 
+  const expenses = await prisma.expense.findMany({
+    include: { property: true, expenseType: true },
+    orderBy: { date: "desc" },
+  });
+
   return {
     guests: buildGuestsCsv(guests),
     bookings: buildBookingsCsv(bookings),
+    expenses: buildExpensesCsv(expenses),
     guestCount: guests.length,
     bookingCount: bookings.length,
+    expenseCount: expenses.length,
   };
 }

@@ -176,7 +176,7 @@ describe("ReservasPage filters", () => {
       screen.getAllByRole("link", { name: /editar/i })[0],
     ).toHaveAttribute(
       "href",
-      `/admin/propiedades/${sampleBooking.propertyId}/agenda?reserva=${sampleBooking.id}`,
+      `/admin/reservas/nueva?reserva=${sampleBooking.id}`,
     );
   });
 });

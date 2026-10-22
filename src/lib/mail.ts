@@ -79,7 +79,8 @@ export async function sendWelcomeEmail(
 }
 
 /**
- * Send the daily backup email with the guests and bookings CSVs attached.
+ * Send the daily backup email with the guests, bookings and expenses CSVs
+ * attached.
  * Falls back to logging the message in development when SMTP is not configured.
  */
 export async function sendBackupEmail(
@@ -91,7 +92,7 @@ export async function sendBackupEmail(
     from: `"Alquileres Anita" <${GMAIL_USER ?? "no-reply@alquileresanita.com.ar"}>`,
     to,
     subject: `Backup Alquileres Anita ${dateStr}`,
-    text: "Adjuntamos el backup diario de huéspedes y reservas.",
+    text: "Adjuntamos el backup diario de huéspedes, reservas y gastos.",
     attachments: [
       {
         filename: `huespedes-${dateStr}.csv`,
@@ -100,6 +101,10 @@ export async function sendBackupEmail(
       {
         filename: `reservas-${dateStr}.csv`,
         content: backup.bookings,
+      },
+      {
+        filename: `gastos-${dateStr}.csv`,
+        content: backup.expenses,
       },
     ],
   };

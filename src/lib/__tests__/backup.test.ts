@@ -3,6 +3,7 @@ import type { Guest } from "@prisma/client";
 import {
   buildGuestsCsv,
   buildBookingsCsv,
+  buildExpensesCsv,
   buildBackupCsvs,
 } from "@/lib/backup";
 import { formatInTz, toUtc } from "@/lib/datetime";
@@ -10,12 +11,14 @@ import { formatInTz, toUtc } from "@/lib/datetime";
 const mocks = vi.hoisted(() => ({
   guestFindMany: vi.fn(),
   bookingFindMany: vi.fn(),
+  expenseFindMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     guest: { findMany: mocks.guestFindMany },
     booking: { findMany: mocks.bookingFindMany },
+    expense: { findMany: mocks.expenseFindMany },
   },
 }));
 
@@ -245,6 +248,99 @@ describe("buildBookingsCsv", () => {
   });
 });
 
+function buildExpense(
+  overrides: Partial<Record<string, unknown>> = {},
+): Record<string, unknown> {
+  return {
+    id: "expense-1",
+    propertyId: "property-1",
+    property: {
+      id: "property-1",
+      title: "Departamento Palermo",
+    },
+    expenseTypeId: "type-1",
+    expenseType: { id: "type-1", name: "Gas" },
+    category: "Servicios",
+    description: "Tanque de gas",
+    amount: 15000.5,
+    date: expenseDate,
+    ...overrides,
+  };
+}
+
+const expenseDate = toUtc("2026-10-12", "10:30");
+
+// Same date display options as the gastos admin list Fecha column.
+function expenseDateMatchesPage(date: Date): string {
+  return formatInTz(date, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+describe("buildExpensesCsv", () => {
+  it("writes BOM + headers in the gastos list order", () => {
+    const csv = buildExpensesCsv([buildExpense() as never]);
+
+    expect(
+      csv.startsWith(
+        "\uFEFFId,Tipo,Propiedad,Categoría,Importe,Fecha,Descripción\r\n",
+      ),
+    ).toBe(true);
+  });
+
+  it("maps expense columns and formats amount/date like the gastos page", () => {
+    const csv = buildExpensesCsv([buildExpense() as never]);
+    const lines = csv.slice("\uFEFF".length).split("\r\n");
+
+    expect(lines[1]).toBe(
+      expectedRow([
+        "expense-1",
+        "Gas",
+        "Departamento Palermo",
+        "Servicios",
+        "15000.5",
+        expenseDateMatchesPage(expenseDate),
+        "Tanque de gas",
+      ]),
+    );
+  });
+
+  it("uses an empty property cell for property-less gastos and empty description", () => {
+    const csv = buildExpensesCsv([
+      buildExpense({
+        property: null,
+        propertyId: null,
+        description: null,
+        expenseType: { id: "type-2", name: "Limpieza" },
+      }) as never,
+    ]);
+    const lines = csv.slice("\uFEFF".length).split("\r\n");
+
+    expect(lines[1]).toBe(
+      expectedRow([
+        "expense-1",
+        "Limpieza",
+        "",
+        "Servicios",
+        "15000.5",
+        expenseDateMatchesPage(expenseDate),
+        "",
+      ]),
+    );
+  });
+
+  it("quotes descriptions containing commas and doubles inner quotes", () => {
+    const csv = buildExpensesCsv([
+      buildExpense({ description: 'Gas, "tanque cargado"' }) as never,
+    ]);
+    const lines = csv.slice("\uFEFF".length).split("\r\n");
+
+    expect(lines[1].endsWith('"Gas, ""tanque cargado"""')).toBe(true);
+  });
+});
+
 describe("buildBackupCsvs", () => {
   it("loads from prisma with the expected ordering and returns counts", async () => {
     mocks.guestFindMany.mockResolvedValue([
@@ -252,6 +348,7 @@ describe("buildBackupCsvs", () => {
       buildGuest({ id: "g2" }),
     ]);
     mocks.bookingFindMany.mockResolvedValue([buildBooking()]);
+    mocks.expenseFindMany.mockResolvedValue([buildExpense()]);
 
     const result = await buildBackupCsvs();
 
@@ -267,9 +364,15 @@ describe("buildBackupCsvs", () => {
       },
       orderBy: { checkIn: "asc" },
     });
+    expect(mocks.expenseFindMany).toHaveBeenCalledWith({
+      include: { property: true, expenseType: true },
+      orderBy: { date: "desc" },
+    });
     expect(result.guestCount).toBe(2);
     expect(result.bookingCount).toBe(1);
+    expect(result.expenseCount).toBe(1);
     expect(result.guests.startsWith("\uFEFF")).toBe(true);
     expect(result.bookings.startsWith("\uFEFF")).toBe(true);
+    expect(result.expenses.startsWith("\uFEFF")).toBe(true);
   });
 });

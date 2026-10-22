@@ -57,6 +57,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       ok: true,
       guests: backup.guestCount,
       bookings: backup.bookingCount,
+      gastos: backup.expenseCount,
     });
   } catch (error) {
     // eslint-disable-next-line no-console

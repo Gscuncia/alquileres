@@ -93,6 +93,34 @@ describe("mail helper", () => {
     expect(options.html).toContain("https://alquileresanita.com.ar/auth/signin");
   });
 
+  it("sends the backup email with the guests, bookings and gastos CSVs attached", async () => {
+    process.env.GMAIL_USER = "test@gmail.com";
+    process.env.GMAIL_APP_PASSWORD = "app-password";
+
+    const { sendBackupEmail } = await importMailModule();
+
+    mockSendMail.mockResolvedValue({});
+    await sendBackupEmail("backup@example.com", "2026-10-21", {
+      guests: "guests-csv",
+      bookings: "bookings-csv",
+      expenses: "expenses-csv",
+      guestCount: 7,
+      bookingCount: 3,
+      expenseCount: 2,
+    });
+
+    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    const options = mockSendMail.mock.calls[0][0];
+    expect(options.to).toBe("backup@example.com");
+    expect(options.subject).toBe("Backup Alquileres Anita 2026-10-21");
+    expect(options.text).toContain("huéspedes, reservas y gastos");
+    expect(options.attachments).toEqual([
+      { filename: "huespedes-2026-10-21.csv", content: "guests-csv" },
+      { filename: "reservas-2026-10-21.csv", content: "bookings-csv" },
+      { filename: "gastos-2026-10-21.csv", content: "expenses-csv" },
+    ]);
+  });
+
   it("sends a reset email with the token link and origin", async () => {
     process.env.GMAIL_USER = "test@gmail.com";
     process.env.GMAIL_APP_PASSWORD = "app-password";

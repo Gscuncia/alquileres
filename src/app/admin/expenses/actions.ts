@@ -14,6 +14,12 @@ import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
 } from "@/lib/admin-action-types";
+import {
+  MAX_RECEIPT_SIZE_BYTES,
+  isAllowedReceiptMime,
+  uploadReceipt,
+  trashReceipt,
+} from "@/lib/drive-receipts";
 
 /**
  * Form normalizer: HTML inputs (type, dates, money) arrive as strings; they
@@ -68,6 +74,55 @@ function revalidateExpensePaths(): void {
   revalidatePath("/admin");
 }
 
+const RECEIPT_COPY = {
+  badMime: "La factura debe ser un PDF o una imagen (JPG, PNG, WebP o HEIC).",
+  tooBig: "La factura no puede superar los 4 MB.",
+  empty: "El archivo de la factura está vacío.",
+  uploadFailed:
+    "El gasto se guardó, pero no se pudo subir la factura. Podés volver a intentar desde la edición.",
+  updateUploadFailed:
+    "Los cambios se guardaron, pero no se pudo subir la factura. Podés volver a intentar desde la edición.",
+  receiptNotFound: "Factura no encontrada.",
+} as const;
+
+interface ReceiptFile {
+  bytes: Uint8Array;
+  mimeType: string;
+}
+
+type ReceiptParseResult =
+  | { ok: true; file: ReceiptFile | null }
+  | { ok: false; fieldError: string };
+
+/**
+ * Reads the optional `receipt` file input. An empty/absent input means "no
+ * receipt"; a present file is validated (mime + size cap) so the caller can
+ * surface a Spanish field error BEFORE any DB write.
+ */
+async function readReceiptFromForm(
+  formData: FormData,
+): Promise<ReceiptParseResult> {
+  const value = formData.get("receipt");
+  if (!value || typeof value === "string") {
+    return { ok: true, file: null };
+  }
+  if (!value.name || value.size === 0) {
+    return { ok: true, file: null };
+  }
+
+  if (value.size > MAX_RECEIPT_SIZE_BYTES) {
+    return { ok: false, fieldError: RECEIPT_COPY.tooBig };
+  }
+  if (!isAllowedReceiptMime(value.type)) {
+    return { ok: false, fieldError: RECEIPT_COPY.badMime };
+  }
+  const bytes = new Uint8Array(await value.arrayBuffer());
+  if (bytes.byteLength === 0) {
+    return { ok: false, fieldError: RECEIPT_COPY.empty };
+  }
+  return { ok: true, file: { bytes, mimeType: value.type } };
+}
+
 /**
  * The requiresProperty cross-field rule needs the DB type row; it is fetched
  * once after schema validation and the persisted propertyId is derived from
@@ -119,12 +174,17 @@ export async function createExpense(
     return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
   }
 
+  const receipt = await readReceiptFromForm(formData);
+  if (!receipt.ok) {
+    return { ok: false, fieldErrors: { receipt: receipt.fieldError } };
+  }
+
   const resolved = await resolveTypeAndProperty(parsed.data);
   if (!resolved.ok) {
     return { ok: false, fieldErrors: resolved.fieldErrors };
   }
 
-  await prisma.expense.create({
+  const created = await prisma.expense.create({
     data: {
       propertyId: resolved.propertyId,
       expenseTypeId: resolved.expenseTypeId,
@@ -133,10 +193,29 @@ export async function createExpense(
       amount: parsed.data.amount,
       date: parsed.data.date,
     },
+    select: { id: true },
   });
 
+  // A failed upload never costs the expense: the row stays and the warning
+  // asks the user to retry from the edit form.
+  let message = ACTION_SUCCESS_MESSAGE;
+  if (receipt.file) {
+    try {
+      const uploaded = await uploadReceipt(created.id, receipt.file);
+      await prisma.expense.update({
+        where: { id: created.id },
+        data: {
+          receiptFileId: uploaded.fileId,
+          receiptFileName: uploaded.fileName,
+        },
+      });
+    } catch {
+      message = RECEIPT_COPY.uploadFailed;
+    }
+  }
+
   revalidateExpensePaths();
-  return { ok: true, message: ACTION_SUCCESS_MESSAGE };
+  return { ok: true, message };
 }
 
 export async function updateExpense(
@@ -152,7 +231,7 @@ export async function updateExpense(
 
   const existing = await prisma.expense.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, receiptFileId: true },
   });
   if (!existing) {
     return { ok: false, message: "Gasto no encontrado." };
@@ -162,6 +241,12 @@ export async function updateExpense(
   if (!parsed.success) {
     return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
   }
+
+  const receipt = await readReceiptFromForm(formData);
+  if (!receipt.ok) {
+    return { ok: false, fieldErrors: { receipt: receipt.fieldError } };
+  }
+  const removeReceipt = formData.get("removeReceipt") === "on";
 
   const resolved = await resolveTypeAndProperty(parsed.data);
   if (!resolved.ok) {
@@ -180,8 +265,44 @@ export async function updateExpense(
     },
   });
 
+  let message = ACTION_SUCCESS_MESSAGE;
+  if (receipt.file) {
+    // Replace flow: upload the new receipt first; only after a successful
+    // upload is the old file trashed and the new ids persisted, so a failed
+    // upload keeps the current receipt untouched.
+    try {
+      const uploaded = await uploadReceipt(id, receipt.file);
+      if (existing.receiptFileId) {
+        try {
+          await trashReceipt(existing.receiptFileId);
+        } catch {
+          // Old file stays in Drive; the DB already points to the new one.
+        }
+      }
+      await prisma.expense.update({
+        where: { id },
+        data: {
+          receiptFileId: uploaded.fileId,
+          receiptFileName: uploaded.fileName,
+        },
+      });
+    } catch {
+      message = RECEIPT_COPY.updateUploadFailed;
+    }
+  } else if (removeReceipt && existing.receiptFileId) {
+    await prisma.expense.update({
+      where: { id },
+      data: { receiptFileId: null, receiptFileName: null },
+    });
+    try {
+      await trashReceipt(existing.receiptFileId);
+    } catch {
+      // Best-effort: the DB reference is already cleared.
+    }
+  }
+
   revalidateExpensePaths();
-  return { ok: true, message: ACTION_SUCCESS_MESSAGE };
+  return { ok: true, message };
 }
 
 /**
@@ -199,6 +320,52 @@ export async function deleteExpense(formData: FormData): Promise<void> {
   }
 
   redirect("/admin/gastos");
+}
+
+/**
+ * Clears the receipt reference on an expense and best-effort trashes the
+ * Drive file (never a hard delete). Used from a plain ConfirmButton form on
+ * the gastos list, so the first argument may be either the ActionState
+ * (useFormState callers) or the FormData itself (plain <form> submit).
+ */
+export async function deleteReceipt(
+  prevState: ActionState | FormData,
+  formData?: FormData,
+): Promise<ActionState> {
+  await requireAdminForAction();
+
+  const data = formData ?? (prevState as FormData);
+  const id = readId(data);
+  const fileIdValue = data.get("receiptFileId");
+  const fileId = typeof fileIdValue === "string" ? fileIdValue.trim() : "";
+
+  if (!id || !fileId) {
+    return { ok: false, message: RECEIPT_COPY.receiptNotFound };
+  }
+
+  // DB first, Drive second: losing the link must not depend on Drive health.
+  await prisma.expense.update({
+    where: { id },
+    data: { receiptFileId: null, receiptFileName: null },
+  });
+
+  try {
+    await trashReceipt(fileId);
+  } catch {
+    // Already covered by the 404-idempotent path; other failures are best-effort.
+  }
+
+  revalidateExpensePaths();
+  return { ok: true, message: ACTION_SUCCESS_MESSAGE };
+}
+
+/**
+ * Plain-form entry point for the gastos list ConfirmButton: React types a
+ * <form action> as (formData) => Promise<void>, so it delegates to
+ * deleteReceipt and discards the (unobservable) ActionState.
+ */
+export async function deleteReceiptForm(formData: FormData): Promise<void> {
+  await deleteReceipt(formData);
 }
 
 /**

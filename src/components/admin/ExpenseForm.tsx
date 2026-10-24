@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
+import {
+  MAX_RECEIPT_SIZE_BYTES,
+  receiptViewUrl,
+} from "@/lib/drive-receipts";
 import { Button } from "@/components/design-system";
 import {
   AdminField,
@@ -30,6 +34,8 @@ interface ExpenseFormProps {
     amount: number | string;
     /** `YYYY-MM-DD` in Buenos Aires local time. */
     date: string;
+    /** Present when the expense already has a Drive receipt attached. */
+    receipt?: { fileId: string; fileName: string };
   };
   submitLabel?: string;
 }
@@ -43,7 +49,17 @@ export function ExpenseForm({
 }: ExpenseFormProps) {
   const [state, formAction] = useFormState(action, { ok: false });
   const [typeId, setTypeId] = useState(initialValues?.typeId ?? "");
+  const [receiptError, setReceiptError] = useState("");
   const selectedType = expenseTypes.find((type) => type.id === typeId);
+
+  const handleReceiptChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.size > MAX_RECEIPT_SIZE_BYTES) {
+      setReceiptError("La factura no puede superar los 4 MB.");
+    } else {
+      setReceiptError("");
+    }
+  };
 
   return (
     <form action={formAction} className="space-y-4">
@@ -139,6 +155,43 @@ export function ExpenseForm({
           name="description"
           rows={2}
           defaultValue={initialValues?.description ?? ""}
+        />
+      </AdminField>
+      <AdminField
+        label="Factura (opcional)"
+        htmlFor="receipt"
+        error={receiptError || state.fieldErrors?.receipt}
+      >
+        {initialValues?.receipt && (
+          <div className="mb-2 space-y-1">
+            <p className="text-body-sm text-body">
+              Factura actual:{" "}
+              <a
+                href={receiptViewUrl(initialValues.receipt.fileId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {initialValues.receipt.fileName}
+              </a>
+            </p>
+            <label className="flex items-center gap-2 text-body-sm text-body">
+              <input
+                type="checkbox"
+                name="removeReceipt"
+                className="h-4 w-4 rounded-sm border-hairline"
+              />
+              Quitar factura actual
+            </label>
+          </div>
+        )}
+        <input
+          id="receipt"
+          name="receipt"
+          type="file"
+          accept="application/pdf,image/*,.pdf"
+          onChange={handleReceiptChange}
+          className="w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body-sm text-body"
         />
       </AdminField>
       <div className="flex justify-end">

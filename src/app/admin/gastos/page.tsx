@@ -11,7 +11,9 @@ import {
   createExpenseType,
   updateExpenseType,
   deleteExpenseType,
+  deleteReceiptForm,
 } from "@/app/admin/expenses/actions";
+import { receiptViewUrl } from "@/lib/drive-receipts";
 import { ExpenseForm } from "@/components/admin/ExpenseForm";
 import { ExpenseTypeForm } from "@/components/admin/ExpenseTypeForm";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
@@ -112,6 +114,12 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
         description: editing.description,
         amount: Number(editing.amount),
         date: toDateStr(editing.date),
+        receipt: editing.receiptFileId
+          ? {
+              fileId: editing.receiptFileId,
+              fileName: editing.receiptFileName ?? "",
+            }
+          : undefined,
       }
     : undefined;
 
@@ -296,6 +304,7 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Importe</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Fecha</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Descripción</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Factura</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
               </tr>
             </thead>
@@ -316,6 +325,38 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
                     {formatInTz(expense.date, dateDisplayOptions)}
                   </td>
                   <td className={tableCellClasses}>{expense.description}</td>
+                  <td className={tableCellClasses}>
+                    {expense.receiptFileId ? (
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={receiptViewUrl(expense.receiptFileId)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          Ver
+                        </a>
+                        <form
+                          action={deleteReceiptForm}
+                          title="Eliminar factura"
+                          className="flex items-center gap-2"
+                        >
+                          <input type="hidden" name="id" value={expense.id} />
+                          <input
+                            type="hidden"
+                            name="receiptFileId"
+                            value={expense.receiptFileId}
+                          />
+                          <ConfirmButton
+                            label="Eliminar"
+                            confirmQuestion="¿Eliminar factura?"
+                          />
+                        </form>
+                      </div>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className={tableCellClasses}>
                     <div className="flex items-center gap-2">
                       <Button asChild variant="tertiary">

@@ -185,6 +185,8 @@ model Expense {
   description   String?
   amount        Decimal     @db.Decimal(12, 2)
   date          DateTime
+  receiptFileId   String?   @map("receipt_file_id")
+  receiptFileName  String?  @map("receipt_file_name")
 
   @@index([date])
   @@index([expenseTypeId])

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   typeCreate: vi.fn(),
   typeUpdate: vi.fn(),
   typeDelete: vi.fn(),
+  fetch: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -52,6 +53,7 @@ import {
   createExpenseType,
   updateExpenseType,
   deleteExpenseType,
+  deleteReceipt,
 } from "@/app/admin/expenses/actions";
 import type { ActionState } from "@/lib/admin-action-types";
 
@@ -85,9 +87,40 @@ function buildTypeFormData(overrides: Record<string, string | number> = {}): For
   return formData;
 }
 
+interface DriveFetchOptions {
+  uploadStatus?: number;
+  uploadJson?: Record<string, unknown>;
+}
+
+/** Installs a fetch double answering the token exchange and Drive calls. */
+function stubDriveFetch({ uploadStatus = 200, uploadJson }: DriveFetchOptions = {}) {
+  mocks.fetch.mockImplementation(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes("oauth2.googleapis.com/token")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: "tk", expires_in: 3600 }),
+        text: async () => "",
+      };
+    }
+    if (url.includes("/upload/drive")) {
+      return {
+        ok: uploadStatus < 400,
+        status: uploadStatus,
+        json: async () =>
+          uploadJson ?? { id: "f-1", name: "e-1.pdf", webViewLink: "https://drive.google.com/file/d/f-1/view" },
+        text: async () => "drive-error",
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({}), text: async () => "" };
+  });
+}
+
 describe("expense actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", mocks.fetch);
     mocks.auth.mockResolvedValue({
       user: { id: "user-1", email: "admin@alquileresanita.com.ar", role: "ADMIN", isDefaultAdmin: true },
     });
@@ -157,6 +190,10 @@ describe("expense actions", () => {
   });
 
   describe("createExpense", () => {
+    beforeEach(() => {
+      mocks.expenseCreate.mockResolvedValue({ id: "e-new" });
+    });
+
     it("requires tipo de gasto: empty typeId is a Spanish field error before any DB write", async () => {
       const result = await createExpense(
         initialState,
@@ -195,6 +232,7 @@ describe("expense actions", () => {
           category: "Plomería",
           amount: 150,
         }),
+        select: { id: true },
       });
     });
 
@@ -223,6 +261,7 @@ describe("expense actions", () => {
           expenseTypeId: "t-cons",
           propertyId: null,
         }),
+        select: { id: true },
       });
     });
 
@@ -249,6 +288,79 @@ describe("expense actions", () => {
       await expect(
         createExpense(initialState, buildFormData()),
       ).rejects.toThrow("connection refused");
+    });
+
+    describe("receipt handling", () => {
+      beforeEach(() => {
+        process.env.GOOGLE_OAUTH_CLIENT_ID = "client-id";
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET = "client-secret";
+        process.env.GOOGLE_OAUTH_REFRESH_TOKEN = "refresh-token";
+        process.env.GOOGLE_DRIVE_GASTOS_FOLDER_ID = "folder-id";
+      });
+
+      /**
+       * jsdom's File lacks arrayBuffer(); back it with the exact buffer the
+       * file was built from so the action can read its bytes.
+       */
+      function makeReceiptFile(size: number, type: string, name = "factura"): File {
+        const buffer = new Uint8Array(size).buffer;
+        const file = new File([buffer], name, { type });
+        Object.defineProperty(file, "arrayBuffer", {
+          value: () => Promise.resolve(buffer),
+        });
+        return file;
+      }
+
+      it("rejects an oversized receipt with a Spanish field error before creating the expense", async () => {
+        const formData = buildFormData();
+        formData.append("receipt", makeReceiptFile(4 * 1024 * 1024 + 1, "application/pdf"));
+
+        const result = await createExpense(initialState, formData);
+
+        expect(result.ok).toBe(false);
+        expect(result.fieldErrors?.receipt).toMatch(/4 MB/);
+        expect(mocks.expenseCreate).not.toHaveBeenCalled();
+      });
+
+      it("rejects a disallowed receipt mime type with a Spanish field error", async () => {
+        const formData = buildFormData();
+        formData.append("receipt", makeReceiptFile(10, "image/gif", "a.gif"));
+
+        const result = await createExpense(initialState, formData);
+
+        expect(result.ok).toBe(false);
+        expect(result.fieldErrors?.receipt).toMatch(/PDF|imagen/i);
+        expect(mocks.expenseCreate).not.toHaveBeenCalled();
+      });
+
+      it("stores the receipt when the upload succeeds", async () => {
+        stubDriveFetch();
+        const formData = buildFormData();
+        formData.append("receipt", makeReceiptFile(10, "application/pdf"));
+
+        const result = await createExpense(initialState, formData);
+
+        expect(result.ok).toBe(true);
+        expect(mocks.expenseUpdate).toHaveBeenCalledWith({
+          where: { id: "e-new" },
+          data: { receiptFileId: "f-1", receiptFileName: "e-1.pdf" },
+        });
+      });
+
+      it("keeps the expense when the upload fails: ok:true with a warning, no receipt update", async () => {
+        stubDriveFetch({ uploadStatus: 500 });
+        const formData = buildFormData();
+        formData.append("receipt", makeReceiptFile(10, "application/pdf"));
+
+        const result = await createExpense(initialState, formData);
+
+        expect(result.ok).toBe(true);
+        expect(result.message).toMatch(/no se pudo subir la factura/i);
+        expect(mocks.expenseCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ data: expect.objectContaining({ category: "Plomería" }) }),
+        );
+        expect(mocks.expenseUpdate).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -293,6 +405,110 @@ describe("expense actions", () => {
         data: expect.objectContaining({ expenseTypeId: "t-cons", propertyId: null }),
       });
     });
+
+    describe("receipt handling", () => {
+      beforeEach(() => {
+        process.env.GOOGLE_OAUTH_CLIENT_ID = "client-id";
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET = "client-secret";
+        process.env.GOOGLE_OAUTH_REFRESH_TOKEN = "refresh-token";
+        process.env.GOOGLE_DRIVE_GASTOS_FOLDER_ID = "folder-id";
+      });
+
+      /**
+       * jsdom's File lacks arrayBuffer(); back it with the exact buffer the
+       * file was built from so the action can read its bytes.
+       */
+      function makeReceiptFile(size: number, type: string, name = "factura"): File {
+        const buffer = new Uint8Array(size).buffer;
+        const file = new File([buffer], name, { type });
+        Object.defineProperty(file, "arrayBuffer", {
+          value: () => Promise.resolve(buffer),
+        });
+        return file;
+      }
+
+      it("replaces the receipt: uploads the new file first, trashes the old one, then stores it", async () => {
+        mocks.expenseFindUnique.mockResolvedValue({
+          id: "e-1",
+          receiptFileId: "f-old",
+        });
+        stubDriveFetch({ uploadJson: { id: "f-new", name: "e-1.pdf", webViewLink: "" } });
+
+        const formData = buildFormData({ id: "e-1" });
+        formData.append("receipt", makeReceiptFile(10, "application/pdf"));
+
+        const result = await updateExpense(initialState, formData);
+
+        expect(result.ok).toBe(true);
+        // The new ids are stored after the successful upload.
+        expect(mocks.expenseUpdate).toHaveBeenCalledWith({
+          where: { id: "e-1" },
+          data: { receiptFileId: "f-new", receiptFileName: "e-1.pdf" },
+        });
+        // The old file goes to the Drive trash, never hard-deleted.
+        const trashCall = mocks.fetch.mock.calls.find((call) =>
+          String(call[0]).includes("drive/v3/files/f-old"),
+        );
+        expect(trashCall).toBeDefined();
+      });
+
+      it("keeps the current receipt when the replacement upload fails", async () => {
+        mocks.expenseFindUnique.mockResolvedValue({
+          id: "e-1",
+          receiptFileId: "f-old",
+        });
+        stubDriveFetch({ uploadStatus: 500 });
+
+        const formData = buildFormData({ id: "e-1" });
+        formData.append("receipt", makeReceiptFile(10, "application/pdf"));
+
+        const result = await updateExpense(initialState, formData);
+
+        expect(result.ok).toBe(true);
+        expect(result.message).toMatch(/no se pudo subir la factura/i);
+        // Only the base field update happened; the old receipt is untouched.
+        expect(mocks.expenseUpdate).toHaveBeenCalledTimes(1);
+        expect(mocks.expenseUpdate).toHaveBeenCalledWith(
+          expect.not.objectContaining({
+            data: expect.objectContaining({ receiptFileId: expect.anything() }),
+          }),
+        );
+      });
+
+      it("removeReceipt flag clears the fields and trashes the old file", async () => {
+        mocks.expenseFindUnique.mockResolvedValue({
+          id: "e-1",
+          receiptFileId: "f-old",
+        });
+        stubDriveFetch();
+
+        const result = await updateExpense(
+          initialState,
+          buildFormData({ id: "e-1", removeReceipt: "on" }),
+        );
+
+        expect(result.ok).toBe(true);
+        expect(mocks.expenseUpdate).toHaveBeenCalledWith({
+          where: { id: "e-1" },
+          data: { receiptFileId: null, receiptFileName: null },
+        });
+        const trashCall = mocks.fetch.mock.calls.find((call) =>
+          String(call[0]).includes("drive/v3/files/f-old"),
+        );
+        expect(trashCall).toBeDefined();
+      });
+
+      it("rejects an oversized receipt with a Spanish field error before updating", async () => {
+        const formData = buildFormData({ id: "e-1" });
+        formData.append("receipt", makeReceiptFile(4 * 1024 * 1024 + 1, "application/pdf"));
+
+        const result = await updateExpense(initialState, formData);
+
+        expect(result.ok).toBe(false);
+        expect(result.fieldErrors?.receipt).toMatch(/4 MB/);
+        expect(mocks.expenseUpdate).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("deleteExpense", () => {
@@ -310,6 +526,72 @@ describe("expense actions", () => {
 
       expect(mocks.expenseDelete).not.toHaveBeenCalled();
       expect(mocks.redirect).toHaveBeenCalledWith("/admin/gastos");
+    });
+  });
+
+  describe("deleteReceipt", () => {
+    beforeEach(() => {
+      process.env.GOOGLE_OAUTH_CLIENT_ID = "client-id";
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET = "client-secret";
+      process.env.GOOGLE_OAUTH_REFRESH_TOKEN = "refresh-token";
+      process.env.GOOGLE_DRIVE_GASTOS_FOLDER_ID = "folder-id";
+      stubDriveFetch();
+    });
+
+    it("clears the receipt fields, then trashes the Drive file", async () => {
+      const formData = new FormData();
+      formData.append("id", "e-1");
+      formData.append("receiptFileId", "f-1");
+
+      const result = await deleteReceipt(initialState, formData);
+
+      expect(result.ok).toBe(true);
+      expect(mocks.expenseUpdate).toHaveBeenCalledWith({
+        where: { id: "e-1" },
+        data: { receiptFileId: null, receiptFileName: null },
+      });
+      const trashCall = mocks.fetch.mock.calls.find((call) =>
+        String(call[0]).includes("drive/v3/files/f-1"),
+      );
+      expect(trashCall).toBeDefined();
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/gastos");
+    });
+
+    it("works as a plain form action where FormData is the only argument", async () => {
+      const formData = new FormData();
+      formData.append("id", "e-1");
+      formData.append("receiptFileId", "f-1");
+
+      const result = await deleteReceipt(formData as unknown as ActionState);
+
+      expect(result.ok).toBe(true);
+      expect(mocks.expenseUpdate).toHaveBeenCalled();
+    });
+
+    it("returns a not-found message when id or receiptFileId are missing", async () => {
+      const result = await deleteReceipt(initialState, new FormData());
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toMatch(/no encontrada/i);
+      expect(mocks.expenseUpdate).not.toHaveBeenCalled();
+    });
+
+    it("ignores Drive failures after clearing the DB reference", async () => {
+      mocks.fetch.mockImplementation(async () => {
+        throw new Error("network down");
+      });
+
+      const formData = new FormData();
+      formData.append("id", "e-1");
+      formData.append("receiptFileId", "f-1");
+
+      const result = await deleteReceipt(initialState, formData);
+
+      expect(result.ok).toBe(true);
+      expect(mocks.expenseUpdate).toHaveBeenCalledWith({
+        where: { id: "e-1" },
+        data: { receiptFileId: null, receiptFileName: null },
+      });
     });
   });
 

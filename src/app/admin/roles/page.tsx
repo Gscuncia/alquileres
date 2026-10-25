@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/require-auth";
+import { adminTabLabel } from "@/lib/admin-tabs";
 import { createRole, updateRole } from "@/app/admin/roles/actions";
 import { RoleForm } from "@/components/admin/RoleForm";
 import {
@@ -13,17 +14,6 @@ import { Button } from "@/components/design-system";
 interface RolesPageProps {
   searchParams?: { rol?: string; error?: string };
 }
-
-const TAB_OPTIONS = [
-  { id: "panel", label: "Panel" },
-  { id: "calendario", label: "Calendario" },
-  { id: "propiedades", label: "Propiedades" },
-  { id: "reservas", label: "Reservas" },
-  { id: "huespedes", label: "Huéspedes" },
-  { id: "destinatarios", label: "Destinatarios" },
-  { id: "gastos", label: "Gastos" },
-  { id: "contexto", label: "Contexto" },
-] as const;
 
 const tableCellClasses = "border-b border-hairline px-4 py-3 text-body-sm text-body";
 
@@ -100,12 +90,7 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
                   <td className={tableCellClasses}>
                     {role.allowedTabs.length === 0
                       ? "Sin acceso"
-                      : role.allowedTabs
-                          .map(
-                            (tab) =>
-                              TAB_OPTIONS.find((option) => option.id === tab)?.label ?? tab,
-                          )
-                          .join(", ")}
+                      : role.allowedTabs.map(adminTabLabel).join(", ")}
                   </td>
                   <td className={tableCellClasses}>
                     <Button asChild variant="tertiary">

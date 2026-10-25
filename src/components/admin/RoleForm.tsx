@@ -2,25 +2,13 @@
 
 import { useFormState } from "react-dom";
 import type { ActionState } from "@/lib/admin-action-types";
+import { GRANTABLE_ADMIN_TABS } from "@/lib/admin-tabs";
 import { Button } from "@/components/design-system";
 import {
   AdminField,
   AdminInput,
   AdminError,
 } from "@/components/admin/primitives";
-
-const TAB_OPTIONS = [
-  { id: "panel", label: "Panel" },
-  { id: "calendario", label: "Calendario" },
-  { id: "propiedades", label: "Propiedades" },
-  { id: "reservas", label: "Reservas" },
-  { id: "huespedes", label: "Huéspedes" },
-  { id: "destinatarios", label: "Destinatarios" },
-  { id: "gastos", label: "Gastos" },
-  { id: "carga-gastos", label: "Carga Gastos" },
-  { id: "contexto", label: "Contexto" },
-  { id: "feriados", label: "Feriados" },
-] as const;
 
 interface RoleFormProps {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
@@ -73,7 +61,7 @@ export function RoleForm({
           Pestañas permitidas
         </legend>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-          {TAB_OPTIONS.map((tab) => {
+          {GRANTABLE_ADMIN_TABS.map((tab) => {
             const checked = initialValues?.allowedTabs.includes(tab.id) ?? false;
             return (
               <label

@@ -4,21 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminForAction } from "@/lib/require-auth";
+import { ADMIN_TABS } from "@/lib/admin-tabs";
 import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
 } from "@/lib/admin-action-types";
-
-const TAB_OPTIONS = [
-  { id: "panel", label: "Panel" },
-  { id: "calendario", label: "Calendario" },
-  { id: "propiedades", label: "Propiedades" },
-  { id: "reservas", label: "Reservas" },
-  { id: "huespedes", label: "Huéspedes" },
-  { id: "destinatarios", label: "Destinatarios" },
-  { id: "gastos", label: "Gastos" },
-  { id: "contexto", label: "Contexto" },
-] as const;
 
 const createRoleSchema = z.object({
   name: z.string().trim().min(1, "El nombre del rol es obligatorio."),
@@ -51,7 +41,7 @@ function buildRoleInput(formData: FormData): Record<string, unknown> {
   };
 
   const allowedTabs: string[] = [];
-  for (const tab of TAB_OPTIONS) {
+  for (const tab of ADMIN_TABS) {
     if (formData.get(`tab-${tab.id}`) === "on") {
       allowedTabs.push(tab.id);
     }

@@ -2,21 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const TABS = [
-  { href: "/admin", label: "Panel", tab: "panel" },
-  { href: "/admin/calendario", label: "Calendario", tab: "calendario" },
-  { href: "/admin/propiedades", label: "Propiedades", tab: "propiedades" },
-  { href: "/admin/reservas", label: "Reservas", tab: "reservas" },
-  { href: "/admin/huespedes", label: "Huéspedes", tab: "huespedes" },
-  { href: "/admin/destinatarios", label: "Destinatarios", tab: "destinatarios" },
-  { href: "/admin/gastos", label: "Gastos", tab: "gastos" },
-  { href: "/admin/carga-gastos", label: "Carga Gastos", tab: "carga-gastos" },
-  { href: "/admin/contexto", label: "Contexto", tab: "contexto" },
-  { href: "/admin/feriados", label: "Feriados", tab: "feriados" },
-  { href: "/admin/usuarios", label: "Usuarios", tab: "usuarios" },
-  { href: "/admin/roles", label: "Roles", tab: "roles" },
-] as const;
+import { ADMIN_ONLY_TAB_IDS, ADMIN_TABS } from "@/lib/admin-tabs";
 
 interface AdminNavTabsProps {
   allowedTabs?: string[];
@@ -36,13 +22,11 @@ export function AdminNavTabs({
 }: AdminNavTabsProps) {
   const pathname = usePathname();
 
-  const ADMIN_ONLY_TABS = new Set(["usuarios", "roles"]);
-
-const visibleTabs = isDefaultAdmin
-    ? TABS
-    : TABS.filter(
+  const visibleTabs = isDefaultAdmin
+    ? ADMIN_TABS
+    : ADMIN_TABS.filter(
         (tab) =>
-          !ADMIN_ONLY_TABS.has(tab.tab) && allowedTabs.includes(tab.tab),
+          !ADMIN_ONLY_TAB_IDS.has(tab.id) && allowedTabs.includes(tab.id),
       );
 
   return (

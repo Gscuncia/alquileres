@@ -113,6 +113,24 @@ describe("role actions", () => {
       });
     });
 
+    // Regression: role tabs come from the canonical admin-tabs registry, so
+    // newly added tabs (feriados, carga-gastos) must persist instead of being
+    // silently dropped by a stale local list.
+    it("persists newly added tabs (feriados, carga-gastos)", async () => {
+      const result = await createRole(
+        initialState,
+        buildFormData({ "tab-feriados": "on", "tab-carga-gastos": "on" } as Record<string, string>),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(mocks.roleCreate).toHaveBeenCalledWith({
+        data: {
+          name: "Contador",
+          allowedTabs: ["carga-gastos", "feriados"],
+        },
+      });
+    });
+
     it("maps P2002 name conflicts to a Spanish field error", async () => {
       mocks.roleCreate.mockRejectedValue({ code: "P2002" });
 

@@ -221,16 +221,6 @@ function DayCell({
       >
         {dayNumber}
       </Link>
-      {holidayNotes && (
-        // Non-link small text: truncation + title keeps long descriptions
-        // readable without growing the fixed-height cell.
-        <span
-          className="w-full truncate text-caption-sm text-muted"
-          title={holidayNotes}
-        >
-          {holidayNotes}
-        </span>
-      )}
       {bars.length > 0 && (
         <div className="flex w-full flex-col gap-0.5">
           {bars.map((bar) => (
@@ -281,6 +271,17 @@ function DayCell({
         >
           +{overflow} más
         </Link>
+      )}
+      {holidayNotes && (
+        // Non-link small text pinned to the cell bottom (mt-auto): truncation
+        // + title keeps long descriptions readable without growing the
+        // fixed-height cell.
+        <span
+          className="mt-auto w-full truncate text-caption-sm text-muted"
+          title={holidayNotes}
+        >
+          {holidayNotes}
+        </span>
       )}
     </div>
   );

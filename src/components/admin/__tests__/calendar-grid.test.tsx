@@ -432,7 +432,7 @@ describe("DayDetailList", () => {
 });
 
 describe("CalendarGrid holidays", () => {
-  it("renders the holiday notes as non-link text below the day number", () => {
+  it("renders the holiday notes as non-link text pinned to the cell bottom", () => {
     const { container } = render(
       <CalendarGrid
         month="2026-10"
@@ -455,6 +455,9 @@ describe("CalendarGrid holidays", () => {
     const grid = container.querySelector('[role="grid"]') as HTMLElement;
     const cell = grid.children[7 + 3 + 12 - 1] as HTMLElement;
     expect(cell).toContainElement(notes);
+    // The annotation is the last element of the cell: visually pinned to the
+    // bottom even when bars/chips are present.
+    expect(cell.lastElementChild).toBe(notes);
   });
 
   it("days without a holiday carry no annotation", () => {

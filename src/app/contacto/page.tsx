@@ -66,6 +66,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
         legal={{
           copyright: "© 2026 Alquileres Anita",
           links: [
+            { label: "Acceso", href: "/auth/signin" },
             { label: "Privacidad" },
             { label: "Términos" },
             { label: "Mapa del sitio" },

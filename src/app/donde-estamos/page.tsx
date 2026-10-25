@@ -43,6 +43,7 @@ export default async function LocationPage() {
         legal={{
           copyright: "© 2026 Alquileres Anita",
           links: [
+            { label: "Acceso", href: "/auth/signin" },
             { label: "Privacidad" },
             { label: "Términos" },
             { label: "Mapa del sitio" },

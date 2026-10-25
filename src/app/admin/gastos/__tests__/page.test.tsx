@@ -62,6 +62,8 @@ const expenses = [
     description: "Cambio de grifería",
     amount: 150,
     date: toUtc("2026-10-03", "00:00"),
+    createdByUserId: "user-1",
+    createdBy: { name: "Juan" },
   },
   {
     id: "e-2",
@@ -73,6 +75,8 @@ const expenses = [
     description: null,
     amount: 200,
     date: toUtc("2026-10-05", "00:00"),
+    createdByUserId: null,
+    createdBy: null,
   },
 ];
 
@@ -106,7 +110,11 @@ describe("GastosPage", () => {
     expect(mocks.expenseFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: undefined,
-        include: { property: true, expenseType: true },
+        include: {
+          property: true,
+          expenseType: true,
+          createdBy: { select: { name: true } },
+        },
         orderBy: { date: "desc" },
       }),
     );
@@ -116,9 +124,34 @@ describe("GastosPage", () => {
     expect(mantRow).toHaveTextContent("Depto 1");
     expect(mantRow).toHaveTextContent("150");
     expect(mantRow).toHaveTextContent("Cambio de grifería");
+    expect(mantRow).toHaveTextContent("Juan");
 
     const consRow = screen.getByText("Expensas").closest("tr");
     expect(consRow).toHaveTextContent("General");
+    expect(consRow).toHaveTextContent("—");
+  });
+
+  it("shows the Cargado por column header and falls back to the raw user id", async () => {
+    mocks.expenseFindMany.mockResolvedValue([
+      {
+        ...expenses[0],
+        createdByUserId: "user-42",
+        createdBy: null,
+      },
+    ]);
+
+    render(await GastosPage({ searchParams: {} }));
+
+    expect(screen.getByText("Cargado por")).toBeInTheDocument();
+    expect(screen.getByText("user-42")).toBeInTheDocument();
+  });
+
+  it("renders no create-expense form outside edit mode (creation lives in Carga Gastos)", async () => {
+    render(await GastosPage({ searchParams: {} }));
+
+    expect(screen.queryByTestId("expense-form")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Nuevo gasto$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Editar gasto$/)).not.toBeInTheDocument();
   });
 
   it("type rows offer Editar via ?tipo=<id> and delete via ConfirmButton form", async () => {
@@ -178,18 +211,28 @@ describe("GastosPage", () => {
     expect(mocks.expenseFindUnique).toHaveBeenCalledWith({
       where: { id: "e-1" },
     });
+    expect(screen.getByTestId("expense-form")).toBeInTheDocument();
     expect(screen.getByText("Editar gasto")).toBeInTheDocument();
     expect(screen.getByText("Cancelar edición")).toBeInTheDocument();
     // Unedited state would read "Nuevo gasto".
     expect(screen.queryByText(/^Nuevo gasto$/)).not.toBeInTheDocument();
   });
 
-  it("keeps the create form when an unknown ?gasto id is given", async () => {
+  it("renders no expense form when an unknown ?gasto id is given", async () => {
     mocks.expenseFindUnique.mockResolvedValue(null);
 
     render(await GastosPage({ searchParams: { gasto: "desconocido" } }));
 
-    expect(screen.getByText(/^Nuevo gasto$/)).toBeInTheDocument();
+    expect(screen.queryByTestId("expense-form")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Nuevo gasto$/)).not.toBeInTheDocument();
+  });
+
+  it("links the header action to the Carga Gastos tab", async () => {
+    render(await GastosPage({ searchParams: {} }));
+
+    expect(
+      screen.getByRole("link", { name: "Cargar gasto" }),
+    ).toHaveAttribute("href", "/admin/carga-gastos");
   });
 
   it("selects a type for editing via ?tipo=<id>: type form in edit mode + Cancelar edición", async () => {

@@ -5,7 +5,6 @@ import { getAllPropertiesForAdmin } from "@/lib/properties-db";
 import { formatInTz, toDateStr, toUtc } from "@/lib/datetime";
 import { formatMoney } from "@/lib/metrics";
 import {
-  createExpense,
   updateExpense,
   deleteExpense,
   createExpenseType,
@@ -99,7 +98,11 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
 
   const expenses = await prisma.expense.findMany({
     where: hasFilters ? where : undefined,
-    include: { property: true, expenseType: true },
+    include: {
+      property: true,
+      expenseType: true,
+      createdBy: { select: { name: true } },
+    },
     orderBy: { date: "desc" },
   });
 
@@ -139,7 +142,14 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="Gastos" />
+      <AdminPageHeader
+        title="Gastos"
+        action={
+          <Button asChild variant="tertiary">
+            <Link href="/admin/carga-gastos">Cargar gasto</Link>
+          </Button>
+        }
+      />
 
       {searchParams?.error === "tipo-gastos" && (
         <div
@@ -204,27 +214,27 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
         </div>
       </AdminPanel>
 
-      <AdminPanel>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-title-md font-semibold text-ink">
-              {editing ? "Editar gasto" : "Nuevo gasto"}
-            </h3>
-            {editing && (
+      {editing && (
+        <AdminPanel>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-title-md font-semibold text-ink">
+                Editar gasto
+              </h3>
               <Button asChild variant="tertiary">
                 <Link href="/admin/gastos">Cancelar edición</Link>
               </Button>
-            )}
+            </div>
+            <ExpenseForm
+              action={updateExpense}
+              properties={properties}
+              expenseTypes={expenseTypeOptions}
+              initialValues={editingInitialValues}
+              submitLabel="Guardar cambios"
+            />
           </div>
-          <ExpenseForm
-            action={editing ? updateExpense : createExpense}
-            properties={properties}
-            expenseTypes={expenseTypeOptions}
-            initialValues={editingInitialValues}
-            submitLabel={editing ? "Guardar cambios" : "Crear gasto"}
-          />
-        </div>
-      </AdminPanel>
+        </AdminPanel>
+      )}
 
       <form
         method="get"
@@ -304,6 +314,7 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Importe</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Fecha</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Descripción</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Cargado por</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Factura</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
               </tr>
@@ -325,6 +336,9 @@ export default async function GastosPage({ searchParams }: GastosPageProps) {
                     {formatInTz(expense.date, dateDisplayOptions)}
                   </td>
                   <td className={tableCellClasses}>{expense.description}</td>
+                  <td className={tableCellClasses}>
+                    {expense.createdBy?.name ?? expense.createdByUserId ?? "—"}
+                  </td>
                   <td className={tableCellClasses}>
                     {expense.receiptFileId ? (
                       <div className="flex items-center gap-2">

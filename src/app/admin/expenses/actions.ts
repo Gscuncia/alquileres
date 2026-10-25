@@ -167,7 +167,7 @@ export async function createExpense(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdminForAction();
+  const session = await requireAdminForAction();
 
   const parsed = expenseSchema.safeParse(buildExpenseInput(formData));
   if (!parsed.success) {
@@ -184,6 +184,10 @@ export async function createExpense(
     return { ok: false, fieldErrors: resolved.fieldErrors };
   }
 
+  // Audit trail: who loaded the expense. The gate above guarantees a session,
+  // but a missing user id (defensive) must never fail the create itself.
+  const createdByUserId = session?.user?.id ?? null;
+
   const created = await prisma.expense.create({
     data: {
       propertyId: resolved.propertyId,
@@ -192,6 +196,7 @@ export async function createExpense(
       description: parsed.data.description ?? null,
       amount: parsed.data.amount,
       date: parsed.data.date,
+      createdByUserId,
     },
     select: { id: true },
   });

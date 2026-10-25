@@ -265,6 +265,31 @@ describe("expense actions", () => {
       });
     });
 
+    it("records the current admin user as the creator (created_by_user_id)", async () => {
+      const result = await createExpense(initialState, buildFormData());
+
+      expect(result.ok).toBe(true);
+      expect(mocks.expenseCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({ createdByUserId: "user-1" }),
+        select: { id: true },
+      });
+    });
+
+    it("falls back to null audit fields when the session user cannot be resolved", async () => {
+      // Session exists (the admin gate passes) but carries no user id:
+      // audit must degrade to null, never fail the create.
+      mocks.auth.mockResolvedValue({ user: { isDefaultAdmin: true } });
+
+      const result = await createExpense(initialState, buildFormData());
+
+      expect(result.ok).toBe(true);
+      expect(mocks.expenseCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ createdByUserId: null }),
+        }),
+      );
+    });
+
     it("rejects a non-numeric amount", async () => {
       const result = await createExpense(
         initialState,
@@ -378,6 +403,22 @@ describe("expense actions", () => {
       });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/gastos");
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin");
+    });
+
+    it("does not touch the audit fields: they always record the original creator", async () => {
+      const result = await updateExpense(
+        initialState,
+        buildFormData({ id: "e-1", amount: "250" }),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(mocks.expenseUpdate).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            createdByUserId: expect.anything(),
+          }),
+        }),
+      );
     });
 
     it("returns a not-found message for an unknown id", async () => {

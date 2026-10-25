@@ -66,6 +66,7 @@ model User {
   role               Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
   accounts           Account[]
   sessions           Session[]
+  createdExpenses    Expense[]
 
   @@map("users")
 }
@@ -187,6 +188,9 @@ model Expense {
   date          DateTime
   receiptFileId   String?   @map("receipt_file_id")
   receiptFileName  String?  @map("receipt_file_name")
+  /// Admin user who loaded the expense; null for legacy rows.
+  createdByUserId String?   @map("created_by_user_id")
+  createdBy       User?     @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([date])
   @@index([expenseTypeId])

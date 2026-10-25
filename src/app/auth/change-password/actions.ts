@@ -5,6 +5,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { landingPathForRole } from "@/lib/admin-landing";
 import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
@@ -69,7 +70,13 @@ export async function changePassword(
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, passwordHash: true },
+    select: {
+      id: true,
+      passwordHash: true,
+      role: {
+        select: { isDefaultAdmin: true, allowedTabs: true, landingTab: true },
+      },
+    },
   });
 
   if (!user || !user.passwordHash) {
@@ -97,5 +104,8 @@ export async function changePassword(
     },
   });
 
-  redirect("/admin");
+  // The JWT still carries mustChangePassword: until re-login, so the
+  // middleware would let /admin through without routing. Explicitly send the
+  // user to their role's landing tab using fresh DB role data.
+  redirect(landingPathForRole(user.role));
 }

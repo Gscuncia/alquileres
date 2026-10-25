@@ -1,6 +1,10 @@
 import NextAuth from "next-auth";
 import authConfig from "@/lib/auth.config";
 import { ADMIN_TABS } from "@/lib/admin-tabs";
+import {
+  ADMIN_ACCESS_DENIED_PATH,
+  resolveAdminLandingPath,
+} from "@/lib/admin-landing";
 
 const { auth } = NextAuth(authConfig);
 
@@ -40,37 +44,6 @@ function getTabForPathname(pathname: string): string | null {
   }
 
   return null;
-}
-
-function tabHref(tabId: string): string | null {
-  return ADMIN_TABS.find((tab) => tab.id === tabId)?.href ?? null;
-}
-
-/**
- * Path a role-based user should land on when the requested tab is not
- * granted: the role's configured landing tab when it is still granted,
- * otherwise the first granted tab in canonical registry order, otherwise
- * the access-denied page (which also avoids a redirect loop on /admin).
- */
-function resolveAdminLandingPath(
-  allowedTabs: string[],
-  landingTab?: string | null,
-): string {
-  if (landingTab && allowedTabs.includes(landingTab)) {
-    const href = tabHref(landingTab);
-    if (href) {
-      return href;
-    }
-  }
-  for (const tab of ADMIN_TABS) {
-    if (allowedTabs.includes(tab.id)) {
-      const href = tabHref(tab.id);
-      if (href) {
-        return href;
-      }
-    }
-  }
-  return "/auth/access-denied";
 }
 
 export default auth((req) => {
@@ -126,9 +99,9 @@ export default auth((req) => {
     user.allowedTabs ?? [],
     user.landingTab,
   );
-  if (landingPath === "/auth/access-denied") {
+  if (landingPath === ADMIN_ACCESS_DENIED_PATH) {
     return Response.redirect(
-      new URL("/auth/access-denied", publicOrigin(req)),
+      new URL(ADMIN_ACCESS_DENIED_PATH, publicOrigin(req)),
     );
   }
   return Response.redirect(new URL(landingPath, publicOrigin(req)));

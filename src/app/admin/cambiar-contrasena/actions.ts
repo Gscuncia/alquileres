@@ -6,6 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/require-auth";
+import { landingPathForRole } from "@/lib/admin-landing";
 import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
@@ -80,7 +81,13 @@ export async function changePassword(
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, passwordHash: true },
+    select: {
+      id: true,
+      passwordHash: true,
+      role: {
+        select: { isDefaultAdmin: true, allowedTabs: true, landingTab: true },
+      },
+    },
   });
 
   if (!user || !user.passwordHash) {
@@ -109,5 +116,5 @@ export async function changePassword(
   });
 
   revalidatePath("/admin");
-  redirect("/admin?message=contrasena-actualizada");
+  redirect(`${landingPathForRole(user.role)}?message=contrasena-actualizada`);
 }

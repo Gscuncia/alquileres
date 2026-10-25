@@ -62,6 +62,11 @@ describe("changePassword action", () => {
     mocks.userFindUnique.mockResolvedValue({
       id: "user-1",
       passwordHash: "hashed-password",
+      role: {
+        isDefaultAdmin: true,
+        allowedTabs: ["panel", "calendario", "gastos"],
+        landingTab: null,
+      },
     });
     mocks.bcryptCompare.mockResolvedValue(true);
     mocks.bcryptHash.mockResolvedValue("new-hashed-password");
@@ -145,5 +150,56 @@ describe("changePassword action", () => {
       },
     });
     expect(mocks.redirect).toHaveBeenCalledWith("/admin");
+  });
+
+  // Forced first-login flow: the JWT still carries mustChangePassword, so the
+  // middleware cannot do the routing — the action must explicitly land the
+  // user on their role's configured landing tab.
+  it("redirects to the role's landing tab after the forced password change", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "user-1",
+      passwordHash: "hashed-password",
+      role: {
+        isDefaultAdmin: false,
+        allowedTabs: ["gastos", "feriados"],
+        landingTab: "gastos",
+      },
+    });
+
+    await expect(changePassword(initialState, buildFormData())).rejects.toThrow(
+      "NEXT_REDIRECT:/admin/gastos",
+    );
+  });
+
+  it("falls back to the first granted tab when the landing tab is not granted", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "user-1",
+      passwordHash: "hashed-password",
+      role: {
+        isDefaultAdmin: false,
+        allowedTabs: ["calendario"],
+        landingTab: "gastos",
+      },
+    });
+
+    await expect(changePassword(initialState, buildFormData())).rejects.toThrow(
+      "NEXT_REDIRECT:/admin/calendario",
+    );
+  });
+
+  it("redirects to access-denied when the role has no granted tabs", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "user-1",
+      passwordHash: "hashed-password",
+      role: {
+        isDefaultAdmin: false,
+        allowedTabs: [],
+        landingTab: null,
+      },
+    });
+
+    await expect(changePassword(initialState, buildFormData())).rejects.toThrow(
+      "NEXT_REDIRECT:/auth/access-denied",
+    );
   });
 });

@@ -68,6 +68,11 @@ describe("admin changePassword action", () => {
     mocks.userFindUnique.mockResolvedValue({
       id: "user-1",
       passwordHash: "hashed-password",
+      role: {
+        isDefaultAdmin: true,
+        allowedTabs: ["panel", "calendario", "gastos"],
+        landingTab: null,
+      },
     });
     mocks.bcryptCompare.mockResolvedValue(true);
     mocks.bcryptHash.mockResolvedValue("new-hashed-password");

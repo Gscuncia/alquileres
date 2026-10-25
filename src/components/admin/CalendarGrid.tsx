@@ -56,6 +56,18 @@ interface CalendarGridProps {
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] as const;
 
+/** Monday-first single-letter weekday label shown in each day cell corner. */
+const WEEKDAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"] as const;
+
+/** Legend under the grid mapping each cell corner letter to its weekday. */
+export const WEEKDAY_LETTER_LEGEND =
+  "L Lunes · M Martes · X Miércoles · J Jueves · V Viernes · S Sábado · D Domingo";
+
+function weekdayLetterFor(dayStr: string): string {
+  const day = toUtc(dayStr, "00:00");
+  return WEEKDAY_LETTERS[(day.getUTCDay() + 6) % 7];
+}
+
 /** Max chips per cell before collapsing into the "+n más" day link. */
 const MAX_CHIPS = 2;
 
@@ -187,7 +199,7 @@ export function buildDayBars(
 }
 
 function cellClasses(): string {
-  return "flex h-28 flex-col items-start gap-1 rounded-md p-1 text-caption-sm bg-surface-soft";
+  return "relative flex h-28 flex-col items-start gap-1 rounded-md p-1 text-caption-sm bg-surface-soft";
 }
 
 function DayCell({
@@ -215,6 +227,14 @@ function DayCell({
 
   return (
     <div key={dayStr} className={cellClasses()}>
+      {/* Top-right weekday letter (decorative; the header row carries the
+          accessible weekday names). */}
+      <span
+        aria-hidden="true"
+        className="absolute right-1.5 top-1 text-caption-sm text-muted"
+      >
+        {weekdayLetterFor(dayStr)}
+      </span>
       <Link
         href={dayHref(dayStr)}
         className="font-medium text-ink underline-offset-2 hover:underline"
@@ -395,6 +415,10 @@ export function CalendarGrid({
           );
         })}
       </div>
+
+      <p className="text-caption-sm text-muted" aria-label="Referencia de días de la semana">
+        {WEEKDAY_LETTER_LEGEND}
+      </p>
 
       {mode === "todas" && properties.length > 0 && (
         <ul className="flex flex-wrap items-center gap-4" aria-label="Leyenda de colores por propiedad">

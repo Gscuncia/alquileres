@@ -478,3 +478,53 @@ describe("CalendarGrid holidays", () => {
     expect(annotations[0].closest("a")).toBeNull();
   });
 });
+
+describe("CalendarGrid weekday letters", () => {
+  // October 2026 starts on a Thursday → 3 Monday-first leading blanks.
+  // Day cells live at grid.children[7 + 3 + (day - 1)].
+  function dayCell(container: HTMLElement, day: number): HTMLElement {
+    const grid = container.querySelector('[role="grid"]') as HTMLElement;
+    return grid.children[7 + 3 + (day - 1)] as HTMLElement;
+  }
+
+  function cornerLetter(cell: HTMLElement): string | null {
+    const span = cell.querySelector("span[aria-hidden='true']");
+    return span ? (span.textContent as string) : null;
+  }
+
+  it("renders the correct weekday letter in each cell corner", () => {
+    const { container } = render(
+      <CalendarGrid
+        month="2026-10"
+        events={[]}
+        properties={properties}
+        mode="single"
+        chipHref={() => "#"}
+        dayHref={() => "#"}
+      />,
+    );
+
+    // Oct 4 2026 is a Sunday, Oct 10 a Saturday, Oct 12 a Monday.
+    expect(cornerLetter(dayCell(container, 4))).toBe("D");
+    expect(cornerLetter(dayCell(container, 10))).toBe("S");
+    expect(cornerLetter(dayCell(container, 12))).toBe("L");
+    expect(cornerLetter(dayCell(container, 1))).toBe("J");
+  });
+
+  it("shows the weekday letter legend below the grid", () => {
+    render(
+      <CalendarGrid
+        month="2026-10"
+        events={[]}
+        properties={properties}
+        mode="single"
+        chipHref={() => "#"}
+        dayHref={() => "#"}
+      />,
+    );
+
+    expect(
+      screen.getByText(/L Lunes · M Martes · X Miércoles · J Jueves · V Viernes · S Sábado · D Domingo/),
+    ).toBeInTheDocument();
+  });
+});

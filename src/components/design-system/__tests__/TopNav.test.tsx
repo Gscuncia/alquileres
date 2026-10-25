@@ -13,12 +13,11 @@ vi.mock("next/image", () => ({
 }));
 
 describe("TopNav", () => {
-  it("renders a top-right Login link to /auth/signin", () => {
+  it("does not render any Login link in the header", () => {
     render(<TopNav />);
 
-    const login = screen.getByRole("link", { name: /login/i });
-    expect(login).toBeInTheDocument();
-    expect(login).toHaveAttribute("href", "/auth/signin");
+    expect(screen.queryByRole("link", { name: /login/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /auth\/signin/i })).not.toBeInTheDocument();
   });
 
   it("still renders public navigation items", () => {

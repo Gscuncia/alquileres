@@ -4,7 +4,6 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "./Button";
 
 export interface TopNavProps {
   logoSrc?: string;
@@ -66,7 +65,7 @@ export const TopNav: React.FC<TopNavProps> = ({
 
       <div className="relative mx-auto max-w-[1440px] px-4 md:px-6">
         {/* Main bar: logo + centered tagline */}
-        <div className="grid h-auto grid-cols-[auto_1fr_auto] items-center gap-4 py-5 md:py-6">
+        <div className="grid h-auto grid-cols-[auto_1fr] items-center gap-4 py-5 md:py-6">
           {/* Logo */}
           <Link href={homeHref} className="flex shrink-0 items-center">
             <Image
@@ -85,13 +84,6 @@ export const TopNav: React.FC<TopNavProps> = ({
               Alojamiento en San Clemente del Tuyú
             </span>
             <span className="mt-2 h-1 w-16 rounded-full bg-primary md:w-20" aria-hidden="true" />
-          </div>
-
-          {/* Login button in the top-right corner */}
-          <div className="hidden md:block">
-            <Button asChild variant="primary">
-              <Link href="/auth/signin">Login</Link>
-            </Button>
           </div>
         </div>
 

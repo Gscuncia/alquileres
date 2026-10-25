@@ -50,6 +50,8 @@ interface CalendarGridProps {
   dayHref(dayStr: string): string;
   /** Agenda keeps its month booking list under the grid. */
   showMonthList?: boolean;
+  /** `YYYY-MM-DD` → holiday notes annotated below the day number. */
+  holidays?: Map<string, string>;
 }
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] as const;
@@ -196,6 +198,7 @@ function DayCell({
   mode,
   chipHref,
   dayHref,
+  holidayNotes,
 }: {
   dayStr: string;
   dayNumber: number;
@@ -204,6 +207,8 @@ function DayCell({
   mode: CalendarGridMode;
   chipHref(bookingId: string): string;
   dayHref(dayStr: string): string;
+  /** Holiday notes shown below the day number (optional annotation). */
+  holidayNotes?: string;
 }) {
   const overflow = Math.max(0, chips.length - MAX_CHIPS);
   const visible = chips.slice(0, MAX_CHIPS);
@@ -216,6 +221,16 @@ function DayCell({
       >
         {dayNumber}
       </Link>
+      {holidayNotes && (
+        // Non-link small text: truncation + title keeps long descriptions
+        // readable without growing the fixed-height cell.
+        <span
+          className="w-full truncate text-caption-sm text-muted"
+          title={holidayNotes}
+        >
+          {holidayNotes}
+        </span>
+      )}
       {bars.length > 0 && (
         <div className="flex w-full flex-col gap-0.5">
           {bars.map((bar) => (
@@ -331,6 +346,7 @@ export function CalendarGrid({
   chipHref,
   dayHref,
   showMonthList = false,
+  holidays,
 }: CalendarGridProps) {
   const year = Number(month.slice(0, 4));
   const monthIndex = Number(month.slice(5, 7)) - 1;
@@ -373,6 +389,7 @@ export function CalendarGrid({
               mode={mode}
               chipHref={chipHref}
               dayHref={dayHref}
+              holidayNotes={holidays?.get(dayStr)}
             />
           );
         })}

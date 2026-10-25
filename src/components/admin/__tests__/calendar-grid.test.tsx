@@ -430,3 +430,48 @@ describe("DayDetailList", () => {
     expect(screen.getByText(/no hay reservas activas/i)).toBeInTheDocument();
   });
 });
+
+describe("CalendarGrid holidays", () => {
+  it("renders the holiday notes as non-link text below the day number", () => {
+    const { container } = render(
+      <CalendarGrid
+        month="2026-10"
+        events={[]}
+        properties={properties}
+        mode="single"
+        chipHref={() => "#"}
+        dayHref={() => "#"}
+        holidays={new Map([["2026-10-12", "Día de la Diversidad Cultural"]])}
+      />,
+    );
+
+    const notes = screen.getByText("Día de la Diversidad Cultural");
+    expect(notes).toHaveAttribute("title", "Día de la Diversidad Cultural");
+    // The annotation is plain text, never a link.
+    expect(notes.closest("a")).toBeNull();
+
+    // It lives inside the matching day cell (Oct 1 2026 is a Thursday →
+    // Monday-first leading blanks = 3).
+    const grid = container.querySelector('[role="grid"]') as HTMLElement;
+    const cell = grid.children[7 + 3 + 12 - 1] as HTMLElement;
+    expect(cell).toContainElement(notes);
+  });
+
+  it("days without a holiday carry no annotation", () => {
+    render(
+      <CalendarGrid
+        month="2026-10"
+        events={[]}
+        properties={properties}
+        mode="single"
+        chipHref={() => "#"}
+        dayHref={() => "#"}
+        holidays={new Map([["2026-10-12", "Feriado"]])}
+      />,
+    );
+
+    const annotations = screen.getAllByText("Feriado");
+    expect(annotations).toHaveLength(1);
+    expect(annotations[0].closest("a")).toBeNull();
+  });
+});

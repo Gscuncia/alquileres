@@ -69,7 +69,7 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
   const specific = properties.find((property) => property.id === propiedadRaw);
   const propiedadParam = specific ? specific.id : "todas";
 
-  const [bookings, editingBooking, recipients, guests] = await Promise.all([
+  const [bookings, editingBooking, recipients, guests, holidayRows] = await Promise.all([
     prisma.booking.findMany({
       where: {
         checkIn: { lt: end },
@@ -91,6 +91,10 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
     prisma.transferRecipient.findMany({ orderBy: { name: "asc" } }),
     prisma.guest.findMany({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    }),
+    prisma.holiday.findMany({
+      // Holidays overlapping the displayed month, keyed by BA calendar date.
+      where: { date: { gte: start, lt: end } },
     }),
   ]);
 
@@ -212,6 +216,9 @@ export default async function CalendarioPage({ searchParams }: CalendarioPagePro
         mode={specific ? "single" : "todas"}
         chipHref={chipHref}
         dayHref={dayHref}
+        holidays={new Map(
+          holidayRows.map((holiday) => [toDateStr(holiday.date), holiday.notes]),
+        )}
       />
 
       {dia && <DayDetailList day={dia} events={events} chipHref={chipHref} />}

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   findBooking: vi.fn(),
   findRecipients: vi.fn(),
   findGuests: vi.fn(),
+  findHolidays: vi.fn(),
   getProperties: vi.fn(),
 }));
 
@@ -22,6 +23,7 @@ vi.mock("@/lib/prisma", () => ({
     },
     transferRecipient: { findMany: mocks.findRecipients },
     guest: { findMany: mocks.findGuests },
+    holiday: { findMany: mocks.findHolidays },
   },
 }));
 
@@ -95,6 +97,7 @@ function bootstrap() {
     { id: "g-1", firstName: "Juan", lastName: "Pérez", dni: "32456778", phone: "2231555555" },
   ]);
   mocks.findBookings.mockResolvedValue([booking({})]);
+  mocks.findHolidays.mockResolvedValue([]);
 }
 
 describe("CalendarioPage", () => {

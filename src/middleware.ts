@@ -30,13 +30,29 @@ function getTabForPathname(pathname: string): string | null {
   return null;
 }
 
+/**
+ * Public origin for redirects. On Vercel, `nextUrl.origin` can carry the
+ * internal production deployment URL (e.g. the *.vercel.app alias) instead
+ * of the domain the user is actually browsing; the forwarded-host/proto
+ * headers reflect the public origin reliably, so they win when present.
+ */
+function publicOrigin(req: { nextUrl: { origin: string }; headers?: Headers }): string {
+  const forwardedHost = req.headers?.get("x-forwarded-host")?.split(",")[0]?.trim();
+  if (forwardedHost) {
+    const forwardedProto =
+      req.headers?.get("x-forwarded-proto")?.split(",")[0]?.trim() ?? "https";
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  return req.nextUrl.origin;
+}
+
 export default auth((req) => {
   const { nextUrl } = req;
   const isAuthenticated = !!req.auth;
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
 
   if (isAdminRoute && !isAuthenticated) {
-    return Response.redirect(new URL("/auth/signin", nextUrl.origin));
+    return Response.redirect(new URL("/auth/signin", publicOrigin(req)));
   }
 
   const user = req.auth?.user;
@@ -67,12 +83,12 @@ export default auth((req) => {
     nextUrl.pathname === "/admin/roles" ||
     nextUrl.pathname.startsWith("/admin/roles/")
   ) {
-    return Response.redirect(new URL("/admin", nextUrl.origin));
+    return Response.redirect(new URL("/admin", publicOrigin(req)));
   }
 
   const tab = getTabForPathname(nextUrl.pathname);
   if (tab === null || !user.allowedTabs?.includes(tab)) {
-    return Response.redirect(new URL("/admin", nextUrl.origin));
+    return Response.redirect(new URL("/admin", publicOrigin(req)));
   }
 });
 

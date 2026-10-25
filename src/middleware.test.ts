@@ -51,10 +51,12 @@ describe("middleware", () => {
   function buildRequest(
     pathname: string,
     user?: UserClaims,
+    headers?: Record<string, string>,
   ): MiddlewareRequest {
     const url = new URL(`http://localhost:3000${pathname}`);
     return {
       nextUrl: url,
+      headers: headers ? new Headers(headers) : undefined,
       auth: user ? { user } : null,
     } as unknown as MiddlewareRequest;
   }
@@ -68,6 +70,23 @@ describe("middleware", () => {
     expect(res).toBeInstanceOf(Response);
     expect(res?.status).toBe(302);
     expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/signin");
+  });
+
+  // Regression: on Vercel, nextUrl.origin can carry the internal production
+  // deployment alias; the forwarded-host header reflects the domain the user
+  // is browsing and must win for redirects to stay in-domain.
+  it("redirects using the forwarded host, not the internal deployment origin", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin", undefined, {
+      "x-forwarded-host": "www.alquileresanita.com.ar",
+      "x-forwarded-proto": "https",
+    });
+
+    const res = middleware(req);
+
+    expect(res?.headers.get("location")).toBe(
+      "https://www.alquileresanita.com.ar/auth/signin",
+    );
   });
 
   it("allows default admins to access any /admin route", async () => {

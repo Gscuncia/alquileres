@@ -17,6 +17,7 @@ const ALL_TAB_LABELS = [
   "Huéspedes",
   "Destinatarios",
   "Gastos",
+  "Carga Gastos",
   "Contexto",
   "Feriados",
   "Usuarios",

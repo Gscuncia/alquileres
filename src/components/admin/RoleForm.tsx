@@ -17,6 +17,7 @@ const TAB_OPTIONS = [
   { id: "huespedes", label: "Huéspedes" },
   { id: "destinatarios", label: "Destinatarios" },
   { id: "gastos", label: "Gastos" },
+  { id: "carga-gastos", label: "Carga Gastos" },
   { id: "contexto", label: "Contexto" },
   { id: "feriados", label: "Feriados" },
 ] as const;

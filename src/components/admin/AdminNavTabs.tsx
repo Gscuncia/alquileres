@@ -11,6 +11,7 @@ const TABS = [
   { href: "/admin/huespedes", label: "Huéspedes", tab: "huespedes" },
   { href: "/admin/destinatarios", label: "Destinatarios", tab: "destinatarios" },
   { href: "/admin/gastos", label: "Gastos", tab: "gastos" },
+  { href: "/admin/carga-gastos", label: "Carga Gastos", tab: "carga-gastos" },
   { href: "/admin/contexto", label: "Contexto", tab: "contexto" },
   { href: "/admin/feriados", label: "Feriados", tab: "feriados" },
   { href: "/admin/usuarios", label: "Usuarios", tab: "usuarios" },

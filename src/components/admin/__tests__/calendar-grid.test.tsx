@@ -458,6 +458,8 @@ describe("CalendarGrid holidays", () => {
     // The annotation is the last element of the cell: visually pinned to the
     // bottom even when bars/chips are present.
     expect(cell.lastElementChild).toBe(notes);
+    // Holiday days use the soft-red background token instead of gray.
+    expect(cell.className).toContain("bg-red-soft");
   });
 
   it("days without a holiday carry no annotation", () => {
@@ -476,6 +478,10 @@ describe("CalendarGrid holidays", () => {
     const annotations = screen.getAllByText("Feriado");
     expect(annotations).toHaveLength(1);
     expect(annotations[0].closest("a")).toBeNull();
+    // Non-holiday days keep the default gray background.
+    const grid = document.querySelector('[role="grid"]') as HTMLElement;
+    const nonHolidayCell = grid.children[7 + 3 + (5 - 1)] as HTMLElement; // Oct 5 → Tuesday
+    expect(nonHolidayCell.className).toContain("bg-surface-soft");
   });
 });
 

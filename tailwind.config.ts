@@ -33,6 +33,7 @@ const config: Config = {
         "surface-soft": "#f7f7f7",
         "surface-card": "#ffffff",
         "surface-strong": "#f2f2f2",
+        "red-soft": "#fdecec",
         cream: "#fff9ed",
         "cream-strong": "#f6ecd6",
         "cream-line": "#ecdfc4",

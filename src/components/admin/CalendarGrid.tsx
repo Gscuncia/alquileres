@@ -198,8 +198,10 @@ export function buildDayBars(
   return bars;
 }
 
-function cellClasses(): string {
-  return "relative flex h-28 flex-col items-start gap-1 rounded-md p-1 text-caption-sm bg-surface-soft";
+function cellClasses(holidayNotes?: string): string {
+  return `relative flex h-28 flex-col items-start gap-1 rounded-md p-1 text-caption-sm ${
+    holidayNotes ? "bg-red-soft" : "bg-surface-soft"
+  }`;
 }
 
 function DayCell({
@@ -226,7 +228,7 @@ function DayCell({
   const visible = chips.slice(0, MAX_CHIPS);
 
   return (
-    <div key={dayStr} className={cellClasses()}>
+    <div key={dayStr} className={cellClasses(holidayNotes)}>
       {/* Top-right weekday letter (decorative; the header row carries the
           accessible weekday names). */}
       <span

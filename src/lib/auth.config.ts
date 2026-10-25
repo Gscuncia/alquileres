@@ -10,6 +10,15 @@ export default {
   },
   callbacks: {
     signIn: async () => true,
+    redirect: async ({ url, baseUrl }) => {
+      // Relative callback URLs stay on the host the user is browsing; on
+      // Vercel the configured base URL can be the internal production alias,
+      // so bailing early keeps redirects in-domain.
+      if (url.startsWith("/")) {
+        return url;
+      }
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
     jwt: async ({ token, user }) => {
       if (user) {
         token.sub = user.id;

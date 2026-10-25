@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminForAction } from "@/lib/require-auth";
-import { ADMIN_TABS } from "@/lib/admin-tabs";
+import { ADMIN_TABS, GRANTABLE_ADMIN_TABS } from "@/lib/admin-tabs";
 import {
   ACTION_SUCCESS_MESSAGE,
   type ActionState,
@@ -13,6 +13,8 @@ import {
 const createRoleSchema = z.object({
   name: z.string().trim().min(1, "El nombre del rol es obligatorio."),
   allowedTabs: z.array(z.string()).default([]),
+  // Empty string = role default (no explicit landing tab selected).
+  landingTab: z.string().default(""),
 });
 
 const updateRoleSchema = createRoleSchema.extend({
@@ -50,7 +52,32 @@ function buildRoleInput(formData: FormData): Record<string, unknown> {
   return {
     name: text("name"),
     allowedTabs,
+    landingTab: text("landingTab"),
   };
+}
+
+const GRANTABLE_TAB_IDS = new Set(GRANTABLE_ADMIN_TABS.map((tab) => tab.id));
+const LANDING_TAB_ERROR = "La pestaña inicial debe estar entre las pestañas permitidas.";
+
+/**
+ * Normalizes the landing tab: empty → null (default landing). A landing tab
+ * that is not among the role's allowed tabs is rejected so a role can never
+ * land on a page it cannot access. A role with no allowed tabs has no landing.
+ */
+function normalizeLandingTab(
+  allowedTabs: string[],
+  landingTab: string,
+): { value: string | null } | { error: string } {
+  if (!landingTab) {
+    return { value: null };
+  }
+  if (!GRANTABLE_TAB_IDS.has(landingTab)) {
+    return { value: null };
+  }
+  if (!allowedTabs.includes(landingTab)) {
+    return { error: LANDING_TAB_ERROR };
+  }
+  return { value: landingTab };
 }
 
 export async function createRole(
@@ -64,8 +91,18 @@ export async function createRole(
     return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
   }
 
+  const landing = normalizeLandingTab(
+    parsed.data.allowedTabs,
+    parsed.data.landingTab,
+  );
+  if ("error" in landing) {
+    return { ok: false, fieldErrors: { landingTab: landing.error } };
+  }
+
   try {
-    await prisma.role.create({ data: parsed.data });
+    await prisma.role.create({
+      data: { ...parsed.data, landingTab: landing.value },
+    });
   } catch (error) {
     if (isNameConflict(error)) {
       return {
@@ -96,6 +133,14 @@ export async function updateRole(
     return { ok: false, fieldErrors: collectFieldErrors(parsed.error) };
   }
 
+  const landing = normalizeLandingTab(
+    parsed.data.allowedTabs,
+    parsed.data.landingTab,
+  );
+  if ("error" in landing) {
+    return { ok: false, fieldErrors: { landingTab: landing.error } };
+  }
+
   const existing = await prisma.role.findUnique({
     where: { id: parsed.data.id },
     select: { id: true },
@@ -110,6 +155,7 @@ export async function updateRole(
       data: {
         name: parsed.data.name,
         allowedTabs: parsed.data.allowedTabs,
+        landingTab: landing.value,
       },
     });
   } catch (error) {

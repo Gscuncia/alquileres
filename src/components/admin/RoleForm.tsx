@@ -16,6 +16,7 @@ interface RoleFormProps {
     id: string;
     name: string;
     allowedTabs: string[];
+    landingTab?: string | null;
   };
   submitLabel?: string;
 }
@@ -81,6 +82,29 @@ export function RoleForm({
           })}
         </div>
       </fieldset>
+      <AdminField
+        label="Pestaña inicial (al ingresar)"
+        htmlFor="landingTab"
+        error={state.fieldErrors?.landingTab}
+      >
+        <AdminInput
+          as="select"
+          id="landingTab"
+          name="landingTab"
+          defaultValue={initialValues?.landingTab ?? ""}
+        >
+          <option value="">Por defecto (Panel)</option>
+          {GRANTABLE_ADMIN_TABS.map((tab) => (
+            <option key={tab.id} value={tab.id}>
+              {tab.label}
+            </option>
+          ))}
+        </AdminInput>
+      </AdminField>
+      <p className="text-caption-sm text-muted">
+        Solo puede elegirse una pestaña que esté permitida para el rol. Sin
+        selección, el usuario aterriza en el Panel.
+      </p>
       <Button type="submit">{submitLabel}</Button>
     </form>
   );

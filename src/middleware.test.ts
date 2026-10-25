@@ -11,6 +11,7 @@ type UserClaims = {
   roleName: string;
   roleId: string;
   allowedTabs: string[];
+  landingTab?: string | null;
   isDefaultAdmin: boolean;
   mustChangePassword?: boolean;
 };
@@ -103,7 +104,7 @@ describe("middleware", () => {
     expect(res).toBeUndefined();
   });
 
-  it("redirects users to /admin when they request a tab not in allowedTabs", async () => {
+  it("redirects users from a tab not in allowedTabs to their first granted tab", async () => {
     const middleware = await loadMiddleware();
     const req = buildRequest("/admin/reservas", makeUser());
 
@@ -111,7 +112,7 @@ describe("middleware", () => {
 
     expect(res).toBeInstanceOf(Response);
     expect(res?.status).toBe(302);
-    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin/calendario");
   });
 
   it("allows users to access tabs listed in allowedTabs", async () => {
@@ -144,6 +145,65 @@ describe("middleware", () => {
     expect(res).toBeUndefined();
   });
 
+  // Role landing tab: after login users land on /admin, so a role without
+  // "panel" must be routed to its configured landing tab instead of looping.
+  it("redirects /admin to the role's configured landing tab", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin",
+      makeUser({ allowedTabs: ["gastos", "feriados"], landingTab: "gastos" }),
+    );
+
+    const res = middleware(req);
+
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin/gastos");
+  });
+
+  it("falls back to the first granted tab when the landing tab is no longer granted", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin",
+      makeUser({ allowedTabs: ["calendario"], landingTab: "gastos" }),
+    );
+
+    const res = middleware(req);
+
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin/calendario");
+  });
+
+  it("routes roles with no granted tabs to access-denied instead of looping /admin", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest("/admin", makeUser({ allowedTabs: [] }));
+
+    const res = middleware(req);
+
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/auth/access-denied");
+  });
+
+  it("allows the canonical feriados tab to access /admin/feriados", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin/feriados",
+      makeUser({ allowedTabs: ["feriados"] }),
+    );
+
+    const res = middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it("allows the canonical carga-gastos tab to access /admin/carga-gastos", async () => {
+    const middleware = await loadMiddleware();
+    const req = buildRequest(
+      "/admin/carga-gastos",
+      makeUser({ allowedTabs: ["carga-gastos"] }),
+    );
+
+    const res = middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
   it("redirects users without the contexto tab away from /admin/contexto", async () => {
     const middleware = await loadMiddleware();
     const req = buildRequest("/admin/contexto", makeUser());
@@ -152,10 +212,10 @@ describe("middleware", () => {
 
     expect(res).toBeInstanceOf(Response);
     expect(res?.status).toBe(302);
-    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin/calendario");
   });
 
-  it("redirects users to /admin for unknown admin sub-routes", async () => {
+  it("redirects users to their first granted tab for unknown admin sub-routes", async () => {
     const middleware = await loadMiddleware();
     const req = buildRequest("/admin/unknown", makeUser());
 
@@ -163,7 +223,7 @@ describe("middleware", () => {
 
     expect(res).toBeInstanceOf(Response);
     expect(res?.status).toBe(302);
-    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin");
+    expect(res?.headers.get("location")).toBe("http://localhost:3000/admin/calendario");
   });
 
   it("redirects non-admins from /admin/usuarios even if the tab is in allowedTabs", async () => {

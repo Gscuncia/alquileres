@@ -61,6 +61,7 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
                     id: editingRole.id,
                     name: editingRole.name,
                     allowedTabs: editingRole.allowedTabs,
+                    landingTab: editingRole.landingTab,
                   }
                 : undefined
             }
@@ -80,6 +81,7 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
               <tr className="bg-surface-soft text-left">
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Nombre</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pestañas permitidas</th>
+                <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Pestaña inicial</th>
                 <th className="border-b border-hairline px-4 py-3 text-caption-sm font-semibold text-ink">Acciones</th>
               </tr>
             </thead>
@@ -91,6 +93,9 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
                     {role.allowedTabs.length === 0
                       ? "Sin acceso"
                       : role.allowedTabs.map(adminTabLabel).join(", ")}
+                  </td>
+                  <td className={tableCellClasses}>
+                    {role.landingTab ? adminTabLabel(role.landingTab) : "—"}
                   </td>
                   <td className={tableCellClasses}>
                     <Button asChild variant="tertiary">

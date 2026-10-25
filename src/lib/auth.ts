@@ -37,6 +37,7 @@ export async function authorize(
     roleId: user.roleId,
     roleName: user.role.name,
     allowedTabs: user.role.allowedTabs,
+    landingTab: user.role.landingTab,
     isDefaultAdmin: user.role.isDefaultAdmin,
     mustChangePassword: user.mustChangePassword,
   };

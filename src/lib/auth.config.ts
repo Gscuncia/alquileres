@@ -25,6 +25,7 @@ export default {
         token.roleId = user.roleId;
         token.roleName = user.roleName;
         token.allowedTabs = user.allowedTabs;
+        token.landingTab = user.landingTab;
         token.isDefaultAdmin = user.isDefaultAdmin;
         token.mustChangePassword = user.mustChangePassword;
       }
@@ -38,6 +39,7 @@ export default {
         session.user.roleId = token.roleId as string;
         session.user.roleName = token.roleName as string;
         session.user.allowedTabs = (token.allowedTabs ?? []) as string[];
+        session.user.landingTab = (token.landingTab ?? null) as string | null;
         session.user.isDefaultAdmin = token.isDefaultAdmin === true;
         session.user.mustChangePassword = (token.mustChangePassword ?? false) as boolean;
       }

@@ -96,6 +96,7 @@ describe("role actions", () => {
         data: {
           name: "Contador",
           allowedTabs: ["calendario", "gastos"],
+          landingTab: null,
         },
       });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/roles");
@@ -109,6 +110,7 @@ describe("role actions", () => {
         data: {
           name: "Contador",
           allowedTabs: [],
+          landingTab: null,
         },
       });
     });
@@ -127,6 +129,67 @@ describe("role actions", () => {
         data: {
           name: "Contador",
           allowedTabs: ["carga-gastos", "feriados"],
+          landingTab: null,
+        },
+      });
+    });
+
+    it("persists a landing tab granted inside allowedTabs", async () => {
+      const result = await createRole(
+        initialState,
+        buildFormData({
+          "tab-gastos": "on",
+          "tab-feriados": "on",
+          landingTab: "gastos",
+        } as Record<string, string>),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(mocks.roleCreate).toHaveBeenCalledWith({
+        data: {
+          name: "Contador",
+          allowedTabs: ["gastos", "feriados"],
+          landingTab: "gastos",
+        },
+      });
+    });
+
+    it("rejects a landing tab that is not among the allowed tabs", async () => {
+      const result = await createRole(
+        initialState,
+        buildFormData({
+          "tab-gastos": "on",
+          landingTab: "calendario",
+        } as Record<string, string>),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.landingTab).toMatch(/pestañas permitidas/i);
+      expect(mocks.roleCreate).not.toHaveBeenCalled();
+    });
+
+    it("rejects a landing tab on a role with no allowed tabs", async () => {
+      const result = await createRole(
+        initialState,
+        buildFormData({ landingTab: "gastos" } as Record<string, string>),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.fieldErrors?.landingTab).toMatch(/pestañas permitidas/i);
+    });
+
+    it("ignores a landing tab value that is not a known grantable tab", async () => {
+      const result = await createRole(
+        initialState,
+        buildFormData({ "tab-gastos": "on", landingTab: "hacker-tab" } as Record<string, string>),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(mocks.roleCreate).toHaveBeenCalledWith({
+        data: {
+          name: "Contador",
+          allowedTabs: ["gastos"],
+          landingTab: null,
         },
       });
     });
@@ -158,10 +221,15 @@ describe("role actions", () => {
       expect(mocks.roleUpdate).not.toHaveBeenCalled();
     });
 
-    it("updates an existing role name and allowed tabs", async () => {
+    it("updates an existing role landing tab along with the tabs", async () => {
       const result = await updateRole(
         initialState,
-        buildFormData({ id: "role-3", name: "Contador senior", "tab-panel": "on" } as Record<string, string>),
+        buildFormData({
+          id: "role-3",
+          name: "Contador senior",
+          "tab-gastos": "on",
+          landingTab: "gastos",
+        } as Record<string, string>),
       );
 
       expect(result.ok).toBe(true);
@@ -169,7 +237,30 @@ describe("role actions", () => {
         where: { id: "role-3" },
         data: {
           name: "Contador senior",
-          allowedTabs: ["panel"],
+          allowedTabs: ["gastos"],
+          landingTab: "gastos",
+        },
+      });
+    });
+
+    it("clears the landing tab when the select is empty", async () => {
+      const result = await updateRole(
+        initialState,
+        buildFormData({
+          id: "role-3",
+          name: "Contador senior",
+          "tab-gastos": "on",
+          landingTab: "",
+        } as Record<string, string>),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(mocks.roleUpdate).toHaveBeenCalledWith({
+        where: { id: "role-3" },
+        data: {
+          name: "Contador senior",
+          allowedTabs: ["gastos"],
+          landingTab: null,
         },
       });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/roles");
